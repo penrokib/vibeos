@@ -15,12 +15,38 @@ import type { JSX } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import type { AuthStatusPayload } from '../../shared/ipc-contracts';
 
+// Sponsor links — hardcoded, https only.
+const SPONSOR_LINKS = [
+  { label: 'GitHub Sponsors', url: 'https://github.com/sponsors/penrokib' },
+  { label: 'Patreon', url: 'https://patreon.com/penrokib' },
+  { label: 'Open Collective', url: 'https://opencollective.com/vibeos' },
+] as const;
+
+// What we collect bullets for the telemetry modal.
+const TELEMETRY_COLLECT = [
+  'Stack trace (file:line)',
+  'App version',
+  'Operating system name + version',
+  'Locale',
+  'Error class name',
+];
+
+const TELEMETRY_NEVER_COLLECT = [
+  'Messages or conversation content',
+  'Account names or contact names',
+  'Personal data of any kind',
+  'IP address (trimmed before send)',
+];
+
 export function Settings(): JSX.Element {
   const [authStatus, setAuthStatus] = useState<AuthStatusPayload | null>(null);
   const [bffEndpoint, setBffEndpoint] = useState('https://app.rokibrain.com');
   const [ghToken, setGhToken] = useState('');
   const [isEnrolling, setIsEnrolling] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  // Telemetry
+  const [telemetryEnabled, setTelemetryEnabled] = useState(false);
+  const [telemetryModalOpen, setTelemetryModalOpen] = useState(false);
 
   // Load initial state on mount.
   useEffect(() => {
@@ -31,6 +57,10 @@ export function Settings(): JSX.Element {
 
       const token = await window.rokibrain.secrets.get('gh_token');
       if (token) setGhToken(token);
+
+      // Load telemetry preference (default OFF — absent key = false).
+      const telVal = await window.rokibrain.secrets.get('telemetry_enabled');
+      setTelemetryEnabled(telVal === 'true');
     })();
 
     const offAuthChange = window.rokibrain.auth.onStatusChange((status) => {
@@ -61,6 +91,20 @@ export function Settings(): JSX.Element {
       setIsSaving(false);
     }
   }, [ghToken]);
+
+  const handleTelemetryToggle = useCallback(async () => {
+    const next = !telemetryEnabled;
+    setTelemetryEnabled(next);
+    if (next) {
+      await window.rokibrain.secrets.set('telemetry_enabled', 'true');
+    } else {
+      await window.rokibrain.secrets.delete('telemetry_enabled');
+    }
+  }, [telemetryEnabled]);
+
+  const handleOpenSponsor = useCallback(async (url: string) => {
+    await window.rokibrain.app.openExternal(url);
+  }, []);
 
   const authStateLabel =
     authStatus?.state === 'enrolled'
@@ -223,7 +267,108 @@ export function Settings(): JSX.Element {
             Export (coming in v2)
           </button>
         </section>
+
+        {/* Support vibeOS */}
+        <section className="space-y-3 rounded-lg border border-amber-800/40 bg-amber-900/10 p-5">
+          <h2 className="text-base font-medium text-amber-200">Support vibeOS</h2>
+          <p className="text-sm text-neutral-400">
+            vibeOS is OSS, donation-funded. Your sponsorship covers infra hosting + future v1.1
+            features.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {SPONSOR_LINKS.map(({ label, url }) => (
+              <button
+                key={url}
+                type="button"
+                aria-label={`Open ${label}`}
+                onClick={() => void handleOpenSponsor(url)}
+                className="rounded border border-amber-700/50 bg-amber-900/30 px-4 py-2 text-sm font-medium text-amber-300 hover:bg-amber-800/40 hover:text-amber-100 transition-colors"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* Anonymous crash reports */}
+        <section className="space-y-3 rounded-lg border border-neutral-800 bg-neutral-900/40 p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-medium text-neutral-200">Anonymous crash reports</h2>
+              <p className="mt-1 text-xs text-neutral-400">
+                Help us fix crashes faster. We never send any of your data — only stack traces with
+                file:line, app version, OS. Default OFF.
+              </p>
+            </div>
+            {/* Toggle switch */}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={telemetryEnabled}
+              aria-label="Toggle anonymous crash reports"
+              onClick={() => void handleTelemetryToggle()}
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${
+                telemetryEnabled ? 'bg-emerald-600' : 'bg-neutral-700'
+              }`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition-transform ${
+                  telemetryEnabled ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={() => setTelemetryModalOpen(true)}
+            className="text-xs text-neutral-500 underline hover:text-neutral-300"
+          >
+            What we collect →
+          </button>
+        </section>
       </div>
+
+      {/* Telemetry detail modal */}
+      {telemetryModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Telemetry details"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+          onClick={() => setTelemetryModalOpen(false)}
+        >
+          <div
+            className="relative mx-4 max-w-md rounded-xl border border-neutral-700 bg-neutral-900 p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-base font-semibold text-neutral-100">What we collect</h3>
+            <ul className="mt-3 space-y-1 text-sm text-neutral-300">
+              {TELEMETRY_COLLECT.map((item) => (
+                <li key={item} className="flex items-start gap-2">
+                  <span className="mt-0.5 text-emerald-400">✓</span>
+                  {item}
+                </li>
+              ))}
+            </ul>
+            <h3 className="mt-4 text-base font-semibold text-neutral-100">We never collect</h3>
+            <ul className="mt-3 space-y-1 text-sm text-neutral-300">
+              {TELEMETRY_NEVER_COLLECT.map((item) => (
+                <li key={item} className="flex items-start gap-2">
+                  <span className="mt-0.5 text-red-400">✗</span>
+                  {item}
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              onClick={() => setTelemetryModalOpen(false)}
+              className="mt-5 w-full rounded bg-neutral-800 px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-700"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

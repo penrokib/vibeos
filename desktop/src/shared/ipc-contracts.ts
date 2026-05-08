@@ -390,6 +390,16 @@ export interface CockpitListPanesResponse {
   panes: CockpitPane[];
 }
 
+// -----------------------------------------------------------------------------
+// Sponsor & Telemetry (M16 / Cycle-29)
+// -----------------------------------------------------------------------------
+
+/** Payload for opening an external HTTPS URL via shell.openExternal. */
+export interface OpenExternalPayload {
+  /** Must start with https:// — enforced in main. */
+  url: string;
+}
+
 export const IPC = {
   /** Daemon status broadcasts. main → renderer (push). */
   DAEMON_STATUS: 'rb.daemon.status',
@@ -455,6 +465,8 @@ export const IPC = {
   COCKPIT_CLOSE_PANE: 'rb.cockpit.closePane',
   /** M06a: list cockpit panes. renderer → main. */
   COCKPIT_LIST_PANES: 'rb.cockpit.listPanes',
+  /** M16: Open an external HTTPS URL (sponsor links, etc.). renderer → main. */
+  APP_OPEN_EXTERNAL: 'rb.app.openExternal',
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];
@@ -554,6 +566,11 @@ export interface RokibrainBridgeApi {
     /** Build/version metadata for footer + bug reports. */
     version: string;
     platform: NodeJS.Platform;
+    /**
+     * Open an HTTPS URL in the system default browser.
+     * Rejects if URL is not https:// (defense against javascript: URIs).
+     */
+    openExternal: (url: string) => Promise<void>;
   };
 }
 
