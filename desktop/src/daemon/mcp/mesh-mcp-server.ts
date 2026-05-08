@@ -28,6 +28,7 @@ import type { SearchScope } from '../search/search.types';
 import type { WaChild } from '../children/wa/wa-child';
 import type { BaseMeshChild } from '../base-child';
 import type { SendPipeline } from '../send-pipeline';
+import type { ComposePipeline } from '../compose/compose-pipeline';
 
 // ---------------------------------------------------------------------------
 // BFF base URL (injected via env; never hardcoded)
@@ -177,6 +178,8 @@ export interface MeshMcpServerOptions {
   digestGenerator: DigestGenerator;
   /** Cycle 17: injected SendPipeline for mesh.send_draft real wiring. */
   sendPipeline?: SendPipeline;
+  /** Cycle 18: injected ComposePipeline for mesh.compose_draft MCP tool. */
+  composePipeline?: ComposePipeline;
 }
 
 /**
@@ -189,10 +192,12 @@ export class MeshMcpServer {
   private readonly supervisor: Supervisor;
   private readonly searchService: SearchService;
   private readonly sendPipeline: SendPipeline | undefined;
+  private readonly composePipeline: ComposePipeline | undefined;
   constructor(opts: MeshMcpServerOptions) {
     this.supervisor = opts.supervisor;
     this.searchService = opts.searchService;
     this.sendPipeline = opts.sendPipeline;
+    this.composePipeline = opts.composePipeline;
     // digestGenerator reserved for cycle 17 — digest signal wiring.
     void opts.digestGenerator;
 
@@ -572,6 +577,74 @@ export class MeshMcpServer {
         return {
           content: [{ type: 'text' as const, text: JSON.stringify(result) }],
         };
+      },
+    );
+
+    // ------------------------------------------------------------------
+    // mesh.compose_draft — Cycle 18: persona pipeline → drafts queue
+    // Wraps ComposePipeline so Claude (Mac or remote) can compose drafts.
+    // HARD WALL: draft NEVER auto-approved. User MUST approve via Drafts tab.
+    // BFF NEVER calls CC — CC subprocess always runs on user's Mac.
+    // ------------------------------------------------------------------
+    mcp.tool(
+      'mesh.compose_draft',
+      'Compose a draft message via the persona pipeline (CC on user\'s Mac). ' +
+        'The draft lands in the approvals queue — the user must approve before it sends. ' +
+        'NEVER auto-approves.',
+      {
+        account: z.string().describe('Paired mesh account to send from (e.g. wap, personal)'),
+        recipient: z.string().describe('Phone, email, or platform handle of the recipient'),
+        persona: z.string().describe('Persona id whose voice rules CC should apply'),
+        raw_text: z.string().min(1).describe("User's raw typed or transcribed text"),
+        target_language: z.string().optional().describe('BCP-47 language code (auto-detected if omitted)'),
+        mode: z.enum(['work', 'personal']).describe('Context mode — affects tone hints'),
+      },
+      async (
+        args: {
+          account: string;
+          recipient: string;
+          persona: string;
+          raw_text: string;
+          target_language?: string;
+          mode: 'work' | 'personal';
+        },
+        extra: { authInfo?: { token?: string } },
+      ) => {
+        this.checkAuth(extra?.authInfo?.token);
+
+        if (!this.composePipeline) {
+          return {
+            content: [{
+              type: 'text' as const,
+              text: JSON.stringify({
+                error: 'COMPOSE_PIPELINE_NOT_CONFIGURED',
+                detail: 'ComposePipeline not injected into MeshMcpServer',
+              }),
+            }],
+          };
+        }
+
+        try {
+          const result = await this.composePipeline.composeDraft({
+            account: args.account,
+            recipient: args.recipient,
+            persona: args.persona,
+            rawText: args.raw_text,
+            targetLanguage: args.target_language,
+            mode: args.mode,
+          });
+
+          return {
+            content: [{ type: 'text' as const, text: JSON.stringify(result) }],
+          };
+        } catch (err) {
+          return {
+            content: [{
+              type: 'text' as const,
+              text: JSON.stringify({ error: 'COMPOSE_PIPELINE_ERROR', detail: String(err) }),
+            }],
+          };
+        }
       },
     );
 

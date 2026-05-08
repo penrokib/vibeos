@@ -583,6 +583,39 @@ export interface VoicePushToBffResult {
 }
 
 // -----------------------------------------------------------------------------
+// Cycle 18 — Compose-from-phone IPC contracts
+// COMPOSE_DRAFT: renderer → main → ComposePipeline → BFF drafts queue
+// Hard wall: draft is NEVER auto-approved. User MUST approve via cycle 17 path.
+// -----------------------------------------------------------------------------
+
+/** Input for COMPOSE_DRAFT. */
+export interface ComposeDraftInput {
+  /** Which paired mesh account to send from (e.g. 'wap', 'personal'). */
+  account: string;
+  /** Phone/email/handle of the intended recipient. */
+  recipient: string;
+  /** Persona id whose voice rules CC should apply. */
+  persona: string;
+  /** User's raw transcribed or typed text. */
+  rawText: string;
+  /** BCP-47 target language (auto-detected if omitted). */
+  targetLanguage?: string;
+  /** 'work' or 'personal' — affects tone hints. */
+  mode: 'work' | 'personal';
+}
+
+/** Result of COMPOSE_DRAFT. */
+export interface ComposeDraftResult {
+  /** Present when composition succeeded. */
+  draftId?: string;
+  refinedText?: string;
+  reasoning?: string;
+  /** Present when composition failed. */
+  error?: string;
+  detail?: string;
+}
+
+// -----------------------------------------------------------------------------
 // Channel name constants. ALL ipc traffic uses these.
 // Naming convention: `rb.<domain>.<verb>` — matches design §1 contract.
 // -----------------------------------------------------------------------------
@@ -732,6 +765,8 @@ export const IPC = {
   EMAIL_PAIR_OAUTH: 'rb.email.pairOAuth',
   /** Cycle 15: manual IMAP/SMTP credentials form. renderer → main. */
   EMAIL_PAIR_IMAP: 'rb.email.pairImap',
+  /** Cycle 18: Compose-from-phone — refine text via persona CC → post draft. renderer → main. */
+  COMPOSE_DRAFT: 'rb.compose.draft',
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];
@@ -887,6 +922,16 @@ export interface RokibrainBridgeApi {
      * Rejects if URL is not https:// (defense against javascript: URIs).
      */
     openExternal: (url: string) => Promise<void>;
+  };
+  compose: {
+    /**
+     * Cycle 18: Compose-from-phone — takes raw text/voice transcript, routes
+     * through the persona pipeline (CC subprocess on user's Mac), then posts
+     * a draft to BFF /agency/drafts. Draft starts in 'pending' state; user
+     * MUST approve via the Drafts tab (cycle 17 send pipeline).
+     * HARD WALL: NEVER auto-approves.
+     */
+    draft: (input: ComposeDraftInput) => Promise<ComposeDraftResult>;
   };
 }
 

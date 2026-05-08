@@ -35,6 +35,8 @@ import {
   type DraftApproveResult,
   type DraftRejectInput,
   type DraftsListResult,
+  type ComposeDraftInput,
+  type ComposeDraftResult,
   type ListBugsInput,
   type ListBugsResult,
   type MeshAccountsPayload,
@@ -186,6 +188,10 @@ const api: RokibrainBridgeApi = {
         IPC.APP_OPEN_EXTERNAL,
         { url } satisfies OpenExternalPayload,
       ) as Promise<void>,
+  },
+  compose: {
+    draft: (input: ComposeDraftInput) =>
+      ipcRenderer.invoke(IPC.COMPOSE_DRAFT, input) as Promise<ComposeDraftResult>,
   },
 };
 
