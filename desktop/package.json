@@ -20,7 +20,8 @@
     "clean": "rm -rf out dist node_modules tsconfig.tsbuildinfo"
   },
   "dependencies": {
-    "electron-updater": "^6.3.9"
+    "electron-updater": "^6.3.9",
+    "libsodium-wrappers": "^0.8.4"
   },
   "devDependencies": {
     "@electron/notarize": "^2.5.0",
@@ -29,6 +30,7 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
+    "@types/libsodium-wrappers": "^0.8.2",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
