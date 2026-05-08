@@ -9,6 +9,7 @@ export default defineConfig({
   plugins: [react()],
   test: {
     globals: true,
+    // Default environment for renderer (React) tests.
     environment: 'happy-dom',
     setupFiles: ['./src/renderer/__tests__/setup.ts'],
     // Renderer-only: daemon tests run under jest (jest.config.cjs / yarn test:daemon)
