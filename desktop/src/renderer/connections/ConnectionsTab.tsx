@@ -1,24 +1,34 @@
 // =============================================================================
-// rokibrain.app — Connections Tab (cycle 15 update)
+// rokibrain.app — Connections Tab (cycle 14 + 15)
 // -----------------------------------------------------------------------------
 // Shows each daemon-supervised child (wa / tg / discord / email / linkedin)
-// with its live status + a restart button.  "+ Add account" opens a wizard
-// that handles Email (Gmail OAuth or manual IMAP) + stubs other platforms.
+// with its live status + a restart button.  "+ Add account" opens a wizard:
+//   - Telegram: 3-step pair wizard (phone → SMS code → done) [Cycle 14]
+//   - Email: Gmail OAuth or manual IMAP/SMTP wizard [Cycle 15]
+//   - Other platforms: stub (future cycles)
 //
 // Hard walls:
 //   - Renderer accesses daemon ONLY via window.rokibrain.daemon.* (contextBridge).
 //   - Email creds transit IPC to main; NEVER stored in renderer state beyond
 //     the transient wizard form (cleared on close).
+//   - TG pair IPC: TG_PAIR_START → main, TG_PAIR_QR ← main, TG_PAIR_CONFIRM → main.
 //   - All IPC channels live in ipc-contracts.ts + main (never inlined here).
 // =============================================================================
 
 import type { JSX } from 'react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
   ChildLifecycleState,
   ChildStatusSummary,
   MeshChildKind,
   SupervisorStatusPayload,
+  TgPairResultPayload,
+} from '../../shared/ipc-contracts';
+import {
+  TG_PAIR_START,
+  TG_PAIR_QR,
+  TG_PAIR_CONFIRM,
+  TG_PAIR_RESULT,
 } from '../../shared/ipc-contracts';
 
 const REFRESH_MS = 15_000;
@@ -391,6 +401,149 @@ function EmailWizard({ onPaired }: {
   );
 }
 
+// ---- Telegram pair wizard (Cycle 14) ----------------------------------------
+
+type TgWizardStep = 'phone' | 'code' | 'done' | 'error';
+
+function TelegramPairWizard({
+  onClose,
+  onBack,
+}: {
+  onClose: () => void;
+  onBack: () => void;
+}): JSX.Element {
+  const [step, setStep] = useState<TgWizardStep>('phone');
+  const [phone, setPhone] = useState('');
+  const [code, setCode] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [busy, setBusy] = useState(false);
+  const accountRef = useRef('personal');
+
+  useEffect(() => {
+    const ipc = (window as unknown as { rokibrain?: {
+      _on?: (channel: string, handler: (payload: unknown) => void) => () => void
+    } }).rokibrain;
+    if (!ipc?._on) return;
+    const offQr = ipc._on(TG_PAIR_QR, () => { setStep('code'); });
+    const offResult = ipc._on(TG_PAIR_RESULT, (payload: unknown) => {
+      const p = payload as TgPairResultPayload;
+      if (p.success) { setStep('done'); }
+      else { setErrorMsg(p.error ?? 'Pair failed'); setStep('error'); }
+    });
+    return () => { offQr(); offResult(); };
+  }, []);
+
+  const handlePhoneSubmit = async (): Promise<void> => {
+    if (!phone.trim()) return;
+    setBusy(true);
+    setErrorMsg('');
+    try {
+      const ipc = (window as unknown as { rokibrain?: {
+        _invoke?: (channel: string, payload: unknown) => Promise<unknown>
+      } }).rokibrain;
+      if (ipc?._invoke) {
+        await ipc._invoke(TG_PAIR_START, { account: accountRef.current, phoneNumber: phone.trim() });
+      }
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to start pair');
+      setStep('error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleCodeSubmit = async (): Promise<void> => {
+    if (!code.trim()) return;
+    setBusy(true);
+    setErrorMsg('');
+    try {
+      const ipc = (window as unknown as { rokibrain?: {
+        _invoke?: (channel: string, payload: unknown) => Promise<unknown>
+      } }).rokibrain;
+      if (ipc?._invoke) {
+        await ipc._invoke(TG_PAIR_CONFIRM, { account: accountRef.current, code: code.trim() });
+      }
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Code submission failed');
+      setStep('error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (step === 'done') {
+    return (
+      <div className="flex flex-col items-center gap-4 py-4 text-center">
+        <span className="text-4xl" aria-hidden="true">✅</span>
+        <p className="text-sm font-medium text-emerald-400">Telegram connected!</p>
+        <p className="text-xs text-neutral-500">
+          Set <span className="font-mono text-emerald-400">MESH_TG_ENABLED=true</span>{' '}
+          and restart the daemon to activate.
+        </p>
+        <button type="button" onClick={onClose}
+          className="mt-2 rounded-md bg-emerald-700 px-4 py-2 text-sm text-white hover:bg-emerald-600">
+          Done
+        </button>
+      </div>
+    );
+  }
+
+  if (step === 'error') {
+    return (
+      <div className="flex flex-col items-center gap-4 py-4 text-center">
+        <span className="text-4xl" aria-hidden="true">⚠️</span>
+        <p className="text-sm font-medium text-red-400">Pair failed</p>
+        <p className="text-xs text-red-300">{errorMsg}</p>
+        <button type="button" onClick={() => { setStep('phone'); setCode(''); setErrorMsg(''); }}
+          className="mt-2 rounded-md bg-neutral-800 px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-700">
+          Try again
+        </button>
+        <button type="button" onClick={onBack} className="text-xs text-neutral-500 hover:text-neutral-300">
+          ← Back
+        </button>
+      </div>
+    );
+  }
+
+  if (step === 'code') {
+    return (
+      <div className="flex flex-col gap-4">
+        <p className="text-xs text-neutral-500">
+          Enter the code Telegram sent to <span className="font-medium text-white">{phone}</span>.
+        </p>
+        <input type="text" inputMode="numeric" placeholder="12345" value={code}
+          onChange={(e) => setCode(e.target.value)} maxLength={10}
+          className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white placeholder-neutral-600 focus:border-emerald-600 focus:outline-none" />
+        <button type="button" disabled={busy || !code.trim()} onClick={() => void handleCodeSubmit()}
+          className="w-full rounded-md bg-emerald-600 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50">
+          {busy ? 'Verifying…' : 'Confirm code'}
+        </button>
+        <button type="button" onClick={onBack} className="text-xs text-neutral-500 hover:text-neutral-300">
+          ← Back
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="text-xs text-neutral-500">
+        Enter your Telegram phone number in E.164 format (e.g. +601234567890).
+      </p>
+      <input type="tel" placeholder="+601234567890" value={phone}
+        onChange={(e) => setPhone(e.target.value)}
+        className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white placeholder-neutral-600 focus:border-emerald-600 focus:outline-none" />
+      <button type="button" disabled={busy || !phone.trim()} onClick={() => void handlePhoneSubmit()}
+        className="w-full rounded-md bg-emerald-600 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50">
+        {busy ? 'Sending code…' : 'Send code'}
+      </button>
+      <button type="button" onClick={onBack} className="text-xs text-neutral-500 hover:text-neutral-300">
+        ← Back to platform list
+      </button>
+    </div>
+  );
+}
+
 // ---- add-account modal ------------------------------------------------------
 
 function AddAccountModal({ onClose }: { onClose: () => void }): JSX.Element {
@@ -407,7 +560,7 @@ function AddAccountModal({ onClose }: { onClose: () => void }): JSX.Element {
       <div className="w-[26rem] rounded-xl border border-neutral-800 bg-neutral-950 p-6 shadow-2xl">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-base font-semibold text-white">
-            {selected === 'email' ? 'Connect email' : 'Add account'}
+            {selected === 'tg' ? 'Connect Telegram' : selected === 'email' ? 'Connect email' : 'Add account'}
           </h2>
           <button
             type="button"
@@ -441,6 +594,12 @@ function AddAccountModal({ onClose }: { onClose: () => void }): JSX.Element {
               ))}
             </ul>
           </>
+        ) : selected === 'tg' ? (
+          // Telegram: real pair wizard (Cycle 14)
+          <TelegramPairWizard
+            onClose={onClose}
+            onBack={() => setSelected(null)}
+          />
         ) : selected === 'email' && !emailPaired ? (
           <EmailWizard
             onClose={onClose}
@@ -460,7 +619,7 @@ function AddAccountModal({ onClose }: { onClose: () => void }): JSX.Element {
               {platformLabel(selected)} pair flow
             </p>
             <p className="text-xs text-neutral-500">
-              Pair flow coming soon for this platform.
+              Pair flow coming in a future cycle.
             </p>
             <button
               type="button"

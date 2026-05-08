@@ -35,6 +35,7 @@ import { Supervisor } from './supervisor';
 import { EnvJwtAuth, DaemonWsServer } from './ws-server';
 import type { SupervisorStatus, ChildState } from './types';
 import { WaChild } from './children/wa/wa-child';
+import { TgChild } from './children/tg/tg-child';
 import { TmuxChild } from './children/tmux/tmux-child';
 import { VoiceChild } from './children/voice/voice-child';
 import { EmailChild } from './children/email/email-child';
@@ -188,6 +189,22 @@ export async function bootstrapDaemon(
         }),
     );
     log('info', 'wa-personal child registered (MESH_WA_ENABLED=true)');
+  }
+
+  // ---- Cycle 14: TgChild registration (MESH_TG_ENABLED=true gates activation) --
+  // Default OFF — Roki opts in after first scan via Connections tab.
+  // Requires MESH_TG_API_ID + MESH_TG_API_HASH env vars.
+  // Session is stored in M12 (Keychain) under key `tg-personal-session`.
+  if (process.env['MESH_TG_ENABLED'] === 'true') {
+    supervisor.register(
+      { id: 'tg-personal', platform: 'telegram' },
+      async (ctx) =>
+        new TgChild(ctx, {
+          account: 'personal',
+          // apiId / apiHash fall through to env MESH_TG_API_ID / MESH_TG_API_HASH
+        }),
+    );
+    log('info', 'tg-personal child registered (MESH_TG_ENABLED=true)');
   }
 
   // ---- M06b: TmuxChild registration (MESH_TMUX_ENABLED, default ON) ----------

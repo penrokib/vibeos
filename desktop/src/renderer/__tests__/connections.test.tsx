@@ -91,7 +91,7 @@ describe('ConnectionsTab', () => {
     // Click WhatsApp in the modal list (first element with label).
     const waButtons = screen.getAllByText('WhatsApp');
     fireEvent.click(waButtons[0]);
-    expect(screen.getByText(/pair flow coming soon/i)).toBeInTheDocument();
+    expect(screen.getByText(/pair flow coming in a future cycle/i)).toBeInTheDocument();
   });
 
   it('closes the modal on Cancel', async () => {

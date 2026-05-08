@@ -430,6 +430,48 @@ export const DIGEST_GENERATE = 'rb.digest.generate' as const;
 export const DIGEST_LATEST = 'rb.digest.latest' as const;
 
 // -----------------------------------------------------------------------------
+// Cycle 14 — Telegram pair-flow IPC contracts
+//
+// TG_PAIR_START:   renderer → main: kick off Telegram pairing for an account.
+// TG_PAIR_QR:      main → renderer (push): signals that a code/QR is needed.
+// TG_PAIR_CONFIRM: renderer → main: submit the SMS/QR code to complete pairing.
+// TG_PAIR_RESULT:  main → renderer (push or invoke return): outcome of pair flow.
+// -----------------------------------------------------------------------------
+
+/** renderer → main: begin Telegram pair flow for the given account. */
+export interface TgPairStartInput {
+  /** Account name, e.g. 'personal'. */
+  account: string;
+  /** Phone number in E.164 format, e.g. '+601234567890'. */
+  phoneNumber: string;
+}
+
+/** main → renderer: a code is required (SMS or QR scan). */
+export interface TgPairQrPayload {
+  account: string;
+  /** 'sms' = enter the code from SMS; 'qr' = scan the QR (future). */
+  codeType: 'sms' | 'qr';
+}
+
+/** renderer → main: submit the received code to complete pairing. */
+export interface TgPairConfirmInput {
+  account: string;
+  code: string;
+}
+
+/** main → renderer: final result of a pair attempt. */
+export interface TgPairResultPayload {
+  account: string;
+  success: boolean;
+  error?: string;
+}
+
+export const TG_PAIR_START = 'rb.tg.pair.start' as const;
+export const TG_PAIR_QR = 'rb.tg.pair.qr' as const;
+export const TG_PAIR_CONFIRM = 'rb.tg.pair.confirm' as const;
+export const TG_PAIR_RESULT = 'rb.tg.pair.result' as const;
+
+// -----------------------------------------------------------------------------
 // Cycle 15 — Email (IMAP/SMTP) pair-flow IPC contracts
 //
 // EMAIL_PAIR_START  : renderer → main: begin pair wizard for an email account
