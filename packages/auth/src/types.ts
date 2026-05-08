@@ -15,11 +15,17 @@ export type UserRole = (typeof USER_ROLES)[number];
 /**
  * Shared auth payload. After jwt.strategy.validate() runs, `role` is always
  * populated — but the JWT-on-the-wire may omit it (older tokens default to admin).
+ *
+ * `tenantId` carries the multi-tenant context for vibeOS OSS users. Each user
+ * gets their own UUID tenant on signup; all queries filter by it. Existing
+ * single-tenant rokibrain instances treat the field as optional and fall back
+ * to a default `'roki'` tenant in the JWT strategy.
  */
 export interface JwtPayload {
   sub: string;
   email: string;
   role: UserRole;
+  tenantId: string;
   iat?: number;
   exp?: number;
 }

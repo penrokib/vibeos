@@ -25,8 +25,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "type-check": "echo '@vibeos/auth type-check disabled until cycle 4' && exit 0",
-    "type-check:real": "tsc --noEmit",
+    "type-check": "tsc --noEmit",
     "clean": "rm -rf dist node_modules tsconfig.tsbuildinfo",
     "test": "jest --passWithNoTests",
     "lint": "echo 'no lint yet' && exit 0"

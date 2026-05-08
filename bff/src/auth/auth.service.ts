@@ -42,7 +42,9 @@ export class AuthService {
       throw new UnauthorizedException("invalid credentials");
     }
 
-    return { sub: user.email, email: user.email, role: user.role };
+    // v1: legacy single-tenant rokibrain users land in the "roki" tenant.
+    // OSS multi-tenant signups will populate this with a per-user UUID.
+    return { sub: user.email, email: user.email, role: user.role, tenantId: "roki" };
   }
 
   signToken(payload: JwtPayload): string {
