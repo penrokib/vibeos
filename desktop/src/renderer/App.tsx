@@ -24,6 +24,7 @@ import { PersonasTab } from './personas/PersonasTab';
 import { DraftsTab } from './drafts/DraftsTab';
 import { DecisionsTab } from './decisions/DecisionsTab';
 import { MeshTab } from './mesh/MeshTab';
+import { ConnectionsTab } from './connections/ConnectionsTab';
 
 interface TabMeta {
   id: TabId;
@@ -144,6 +145,8 @@ export function App(): JSX.Element {
           <DraftsTab />
         ) : activeTab === 'decisions' ? (
           <DecisionsTab />
+        ) : activeTab === 'connections' ? (
+          <ConnectionsTab />
         ) : (
           <TabPlaceholder
             tabId={activeMeta.id}

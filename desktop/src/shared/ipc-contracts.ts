@@ -416,13 +416,13 @@ export interface RokibrainBridgeApi {
     onStatus: (handler: (payload: DaemonStatusPayload) => void) => () => void;
     /** One-shot fetch of the current ws port. */
     getWsPort: () => Promise<DaemonWsPortPayload>;
-    /** Full supervisor snapshot — children + uptime. */
+    /** M02: Full supervisor snapshot — children + uptime. */
     getSupervisorStatus: () => Promise<SupervisorStatusPayload>;
-    /** Subscribe to supervisor status pushes. */
+    /** M02: Subscribe to supervisor status pushes. */
     onSupervisorStatus: (handler: (payload: SupervisorStatusPayload) => void) => () => void;
-    /** Restart (or unlock-then-restart) a child by id. */
+    /** M02: Restart (or unlock-then-restart) a child by id. */
     restartChild: (req: DaemonChildRestartRequest) => Promise<void>;
-    /** Emergency-stop all children (or resume). */
+    /** M02: Emergency-stop all children (or resume). */
     emergencyStop: (payload?: DaemonEmergencyStopPayload) => Promise<void>;
   };
   tabs: {

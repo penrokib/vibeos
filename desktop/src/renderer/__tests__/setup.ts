@@ -26,6 +26,16 @@ afterAll(() => server.close());
   daemon: {
     onStatus: () => () => {},
     getWsPort: async () => ({ port: 0 }),
+    // M02 supervisor methods
+    getSupervisorStatus: async () => ({
+      wsPort: 0,
+      uptime: 0,
+      emergencyStopped: false,
+      children: [],
+    }),
+    onSupervisorStatus: () => () => {},
+    restartChild: async () => {},
+    emergencyStop: async () => {},
   },
   tabs: {
     switch: async () => {},
