@@ -11,6 +11,9 @@ final class DevicesStore {
     var loading: Bool = false
     var error: String?
 
+    private(set) var mode: WorkPersonalMode
+    nonisolated(unsafe) private var modeObserver: NSObjectProtocol?
+
     // MARK: - Derived
 
     var selectedDevice: MeshDevice? {
@@ -22,6 +25,38 @@ final class DevicesStore {
         selectedDevice?.panes ?? []
     }
 
+    init(mode: WorkPersonalMode = .work) {
+        self.mode = mode
+        subscribeToModeChanges()
+    }
+
+    deinit {
+        if let obs = modeObserver {
+            NotificationCenter.default.removeObserver(obs)
+        }
+    }
+
+    // MARK: - Mode subscription (brain-split: clears before re-fetch)
+
+    private func subscribeToModeChanges() {
+        modeObserver = NotificationCenter.default.addObserver(
+            forName: .vibeosModeChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let self else { return }
+            let raw = notification.userInfo?["mode"] as? String ?? "work"
+            let newMode = WorkPersonalMode(rawValue: raw) ?? .work
+            Task { @MainActor in
+                // BRAIN-SPLIT SAFETY: clear stale data before fetching new mode
+                self.devices = []
+                self.selectedDeviceId = nil
+                self.mode = newMode
+                await self.refresh()
+            }
+        }
+    }
+
     // MARK: - Refresh all devices
 
     func refresh() async {
@@ -29,8 +64,9 @@ final class DevicesStore {
         error = nil
         defer { loading = false }
 
+        let path = "/mesh/devices?mode=\(mode.rawValue)"
         do {
-            let fetched = try await APIClient.shared.get("/mesh/devices", as: [MeshDevice].self)
+            let fetched = try await APIClient.shared.get(path, as: [MeshDevice].self)
             self.devices = fetched
             if selectedDeviceId == nil {
                 selectedDeviceId = fetched.first?.id

@@ -12,6 +12,9 @@ final class InboxStore {
     var platformFilter: String?
     var viewFilter: InboxFilter = .all
 
+    private(set) var mode: WorkPersonalMode
+    nonisolated(unsafe) private var modeObserver: NSObjectProtocol?
+
     // MARK: - Derived list
 
     var filteredThreads: [InboxThread] {
@@ -30,6 +33,39 @@ final class InboxStore {
         Array(Set(threads.map(\.platform))).sorted()
     }
 
+    init(mode: WorkPersonalMode = .work) {
+        self.mode = mode
+        subscribeToModeChanges()
+    }
+
+    deinit {
+        if let obs = modeObserver {
+            NotificationCenter.default.removeObserver(obs)
+        }
+    }
+
+    // MARK: - Mode subscription (brain-split: clears before re-fetch)
+
+    private func subscribeToModeChanges() {
+        modeObserver = NotificationCenter.default.addObserver(
+            forName: .vibeosModeChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let self else { return }
+            let raw = notification.userInfo?["mode"] as? String ?? "work"
+            let newMode = WorkPersonalMode(rawValue: raw) ?? .work
+            Task { @MainActor in
+                // BRAIN-SPLIT SAFETY: clear stale data before fetching new mode
+                self.threads = []
+                self.accountFilter = nil
+                self.platformFilter = nil
+                self.mode = newMode
+                await self.refresh()
+            }
+        }
+    }
+
     // MARK: - Refresh
 
     func refresh() async {
@@ -37,8 +73,9 @@ final class InboxStore {
         error = nil
         defer { loading = false }
 
+        let path = "/mesh/threads?mode=\(mode.rawValue)"
         do {
-            let fetched = try await APIClient.shared.get("/mesh/threads", as: [InboxThread].self)
+            let fetched = try await APIClient.shared.get(path, as: [InboxThread].self)
             self.threads = fetched.sorted { $0.lastTimestamp > $1.lastTimestamp }
         } catch let apiError as APIError {
             switch apiError {

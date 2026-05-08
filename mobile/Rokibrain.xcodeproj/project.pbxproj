@@ -41,6 +41,7 @@
 		AA0010350000000000000001 /* PairMacStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010350000000000000001 /* PairMacStep.swift */; };
 		AA0010360000000000000001 /* EnablePushStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010360000000000000001 /* EnablePushStep.swift */; };
 		AA00100D0000000000000001 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AB00100D0000000000000001 /* Preview Assets.xcassets */; };
+		AA0010400000000000000001 /* AppMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010400000000000000001 /* AppMode.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -80,6 +81,7 @@
 		AB0010340000000000000001 /* SignInStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInStep.swift; sourceTree = "<group>"; };
 		AB0010350000000000000001 /* PairMacStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairMacStep.swift; sourceTree = "<group>"; };
 		AB0010360000000000000001 /* EnablePushStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnablePushStep.swift; sourceTree = "<group>"; };
+		AB0010400000000000000001 /* AppMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppMode.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -142,6 +144,7 @@
 				AB0010030000000000000001 /* APIClient.swift */,
 				AB0010040000000000000001 /* WSClient.swift */,
 				AB0010050000000000000001 /* Keychain.swift */,
+				AB0010400000000000000001 /* AppMode.swift */,
 				AB0010100000000000000001 /* DigestStore.swift */,
 				AB0010130000000000000001 /* InboxStore.swift */,
 				AB0010170000000000000001 /* DraftsStore.swift */,
@@ -293,6 +296,7 @@
 				AA0010340000000000000001 /* SignInStep.swift in Sources */,
 				AA0010350000000000000001 /* PairMacStep.swift in Sources */,
 				AA0010360000000000000001 /* EnablePushStep.swift in Sources */,
+				AA0010400000000000000001 /* AppMode.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

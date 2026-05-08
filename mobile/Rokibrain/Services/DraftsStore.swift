@@ -9,6 +9,40 @@ final class DraftsStore {
     var error: String?
     var processing: Set<String> = []
 
+    private(set) var mode: WorkPersonalMode
+    nonisolated(unsafe) private var modeObserver: NSObjectProtocol?
+
+    init(mode: WorkPersonalMode = .work) {
+        self.mode = mode
+        subscribeToModeChanges()
+    }
+
+    deinit {
+        if let obs = modeObserver {
+            NotificationCenter.default.removeObserver(obs)
+        }
+    }
+
+    // MARK: - Mode subscription (brain-split: clears before re-fetch)
+
+    private func subscribeToModeChanges() {
+        modeObserver = NotificationCenter.default.addObserver(
+            forName: .vibeosModeChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let self else { return }
+            let raw = notification.userInfo?["mode"] as? String ?? "work"
+            let newMode = WorkPersonalMode(rawValue: raw) ?? .work
+            Task { @MainActor in
+                // BRAIN-SPLIT SAFETY: clear stale data before fetching new mode
+                self.drafts = []
+                self.mode = newMode
+                await self.refresh()
+            }
+        }
+    }
+
     // MARK: - Refresh
 
     func refresh() async {
@@ -18,7 +52,7 @@ final class DraftsStore {
 
         do {
             let fetched = try await APIClient.shared.get(
-                "/agency/drafts/pending?detail=true",
+                "/agency/drafts/pending?detail=true&mode=\(mode.rawValue)",
                 as: [DraftDetail].self
             )
             self.drafts = fetched
