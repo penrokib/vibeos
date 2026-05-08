@@ -39,6 +39,9 @@ struct MainTabView: View {
             TodayView()
                 .tabItem { Label("Today", systemImage: "sun.max.fill") }
 
+            InboxTab()
+                .tabItem { Label("Inbox", systemImage: "tray.full") }
+
             HomeView()
                 .tabItem { Label("Home", systemImage: "house.fill") }
 
