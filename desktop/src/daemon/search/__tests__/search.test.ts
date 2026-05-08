@@ -2,7 +2,6 @@
 // vibeOS — SearchService tests (cycle 13)
 // =============================================================================
 
-// jest globals — no import needed
 import { SearchService } from '../search.service';
 import { KeywordSearch } from '../keyword-search';
 import { SemanticSearch } from '../semantic-search';
