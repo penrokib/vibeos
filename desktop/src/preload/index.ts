@@ -54,6 +54,11 @@ import {
   type TabId,
   type TabSwitchPayload,
   type VoiceTogglePayload,
+  type VoiceRecordStartPayload,
+  type VoiceRecordStopInput,
+  type VoiceTranscriptResult,
+  type VoicePushToBffInput,
+  type VoicePushToBffResult,
 } from '../shared/ipc-contracts';
 
 function subscribe<T>(channel: string, handler: (payload: T) => void): () => void {
@@ -142,6 +147,15 @@ const api: RokibrainBridgeApi = {
     list: () => ipcRenderer.invoke(IPC.CC_FLEET_LIST) as Promise<CcFleetListPayload>,
     submit: (input: CcFleetSubmitInput) =>
       ipcRenderer.invoke(IPC.CC_FLEET_SUBMIT, input) as Promise<CcFleetSubmitResult>,
+  },
+  quickbar: {
+    toggle: () => ipcRenderer.invoke(IPC.QUICKBAR_TOGGLE) as Promise<void>,
+    recordStart: (payload: VoiceRecordStartPayload) =>
+      ipcRenderer.invoke(IPC.VOICE_RECORD_START, payload) as Promise<void>,
+    recordStopAndTranscribe: (input: VoiceRecordStopInput) =>
+      ipcRenderer.invoke(IPC.VOICE_RECORD_STOP_AND_TRANSCRIBE, input) as Promise<VoiceTranscriptResult>,
+    pushToBff: (input: VoicePushToBffInput) =>
+      ipcRenderer.invoke(IPC.VOICE_PUSH_TO_BFF, input) as Promise<VoicePushToBffResult>,
   },
   digest: {
     generate: (input: DigestGenerateInput) =>

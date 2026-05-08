@@ -55,7 +55,10 @@ describe('daemon bootstrap + parentPort round-trip', () => {
     expect(parent.outbox[0]?.kind).toBe('ready');
     if (parent.outbox[0]?.kind === 'ready') {
       expect(parent.outbox[0].wsPort).toBeGreaterThan(0);
-      expect(parent.outbox[0].status.children).toEqual([]);
+      // Voice child is auto-registered in bootstrapDaemon (M11).
+      // Verify it appears in the initial snapshot but don't assert exact list length.
+      const childIds = parent.outbox[0].status.children.map((c) => c.id);
+      expect(childIds).toContain('voice');
     }
 
     // Register a noop child. Must happen BEFORE startAll for the test seam.

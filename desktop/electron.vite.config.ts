@@ -57,7 +57,13 @@ export default defineConfig({
     build: {
       outDir: 'out/renderer',
       rollupOptions: {
-        input: resolve(__dirname, 'src/renderer/index.html'),
+        // Two renderer entries: main app + voice quickbar overlay.
+        // Main: out/renderer/index.html
+        // Quickbar: out/renderer/quickbar/index.html
+        input: {
+          index: resolve(__dirname, 'src/renderer/index.html'),
+          quickbar: resolve(__dirname, 'src/renderer/quickbar/index.html'),
+        },
       },
     },
     resolve: {
