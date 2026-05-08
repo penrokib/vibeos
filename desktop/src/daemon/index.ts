@@ -23,6 +23,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { homedir, platform as osPlatform } from 'node:os';
 import { join } from 'node:path';
+import { randomBytes } from 'node:crypto';
 import {
   HttpBffCounterClient,
   setBffCounterClient,
@@ -34,6 +35,10 @@ import type { SupervisorStatus, ChildState } from './types';
 import { WaChild } from './children/wa/wa-child';
 import { TmuxChild } from './children/tmux/tmux-child';
 import { VoiceChild } from './children/voice/voice-child';
+import { MeshMcpServer } from './mcp/mesh-mcp-server';
+import { SearchService } from './search/search.service';
+import { DigestGenerator } from './digest/digest-generator';
+import { FleetManager } from './cc-fleet/fleet-manager';
 
 // -----------------------------------------------------------------------------
 // IPC envelope between main and daemon utilityProcess.
@@ -103,6 +108,33 @@ async function writePortFile(port: number): Promise<void> {
   await writeFile(join(dir, 'daemon.port'), String(port), { mode: 0o600 });
 }
 
+/**
+ * Write the MCP token file used by the vibeos-mcp-shim.
+ * Stored at ~/Library/Application Support/vibeOS/mcp-token.json (mode 0o600).
+ * The token is also written to process.env.VIBEOS_MCP_TOKEN for in-process use.
+ * NEVER log or expose the token value.
+ */
+async function writeMcpTokenFile(port: number, token: string): Promise<void> {
+  // vibeOS userdata dir (distinct from rokibrain.app dir)
+  let dir: string;
+  switch (osPlatform()) {
+    case 'darwin':
+      dir = join(homedir(), 'Library', 'Application Support', 'vibeOS');
+      break;
+    case 'win32':
+      dir = join(
+        process.env['APPDATA'] ?? join(homedir(), 'AppData', 'Roaming'),
+        'vibeOS',
+      );
+      break;
+    default:
+      dir = join(homedir(), '.config', 'vibeOS');
+  }
+  await mkdir(dir, { recursive: true });
+  const content = JSON.stringify({ port, token });
+  await writeFile(join(dir, 'mcp-token.json'), content, { mode: 0o600 });
+}
+
 // -----------------------------------------------------------------------------
 // Daemon bootstrap.
 // -----------------------------------------------------------------------------
@@ -115,11 +147,16 @@ export interface DaemonBootstrapOptions {
   wsPort?: number;
   /** Disable port-file write (tests). */
   skipPortFile?: boolean;
+  /** Disable MCP token file write (tests). */
+  skipMcpTokenFile?: boolean;
 }
 
 export interface DaemonBootstrapResult {
   supervisor: Supervisor;
   ws: DaemonWsServer;
+  meshMcp: MeshMcpServer;
+  /** Returns the MCP port (same as WS port — MCP shares the daemon WS port). */
+  getMcpPort: () => number;
   shutdown: () => Promise<void>;
 }
 
@@ -202,12 +239,42 @@ export async function bootstrapDaemon(
     setBffCounterClient(null);
   }
 
+  // ---- Cycle 16: MeshMcpServer + MCP token -----------------------------------
+  // Generate a random JWT token and wire the MeshMcpServer. Token is written to
+  // the vibeOS userdata dir (0o600) for the vibeos-mcp-shim to read.
+  const mcpToken = randomBytes(32).toString('hex');
+  process.env['VIBEOS_MCP_TOKEN'] = mcpToken;
+
+  const searchService = new SearchService();
+  // FleetManager + DigestGenerator are lightweight — instantiate unconditionally.
+  const fleetManager = new FleetManager();
+  const digestGenerator = new DigestGenerator(fleetManager);
+
+  const meshMcp = new MeshMcpServer({
+    supervisor,
+    searchService,
+    digestGenerator,
+  });
+  log('info', 'MeshMcpServer instantiated (Cycle 16)');
+
+  if (!opts.skipMcpTokenFile) {
+    try {
+      await writeMcpTokenFile(ws.port, mcpToken);
+      log('info', 'MCP token file written');
+    } catch (err) {
+      log('warn', 'failed to write MCP token file', { err: String(err) });
+    }
+  }
+
   const parent = opts.parentPort ?? getParentPort();
   if (parent) {
     wireParentPort(parent, supervisor);
   }
 
+  const getMcpPort = (): number => ws.port;
+
   const shutdown = async (): Promise<void> => {
+    await meshMcp.close().catch(() => undefined);
     await supervisor.stopAll(true);
     await ws.close();
   };
@@ -220,7 +287,7 @@ export async function bootstrapDaemon(
     });
   }
 
-  return { supervisor, ws, shutdown };
+  return { supervisor, ws, meshMcp, getMcpPort, shutdown };
 }
 
 function wireParentPort(parent: ParentPortLike, supervisor: Supervisor): void {

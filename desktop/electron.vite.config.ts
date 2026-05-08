@@ -17,6 +17,7 @@ export default defineConfig({
         entry: {
           index: resolve(__dirname, 'src/main/index.ts'),
           daemon: resolve(__dirname, 'src/daemon/index.ts'),
+          'vibeos-mcp': resolve(__dirname, 'src/daemon/mcp/vibeos-mcp-shim.ts'),
         },
         formats: ['cjs'],
       },
