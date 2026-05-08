@@ -2,15 +2,6 @@ import SwiftUI
 
 struct TodayView: View {
     @State private var store = DigestStore()
-    // @AppStorage mirrors DigestStore.mode so the picker survives app restarts
-    @AppStorage("digestMode") private var digestModeRaw: String = WorkPersonalMode.work.rawValue
-
-    private var modeBinding: Binding<WorkPersonalMode> {
-        Binding(
-            get: { store.mode },
-            set: { store.mode = $0 }
-        )
-    }
 
     var body: some View {
         NavigationStack {
@@ -23,17 +14,6 @@ struct TodayView: View {
             }
             .navigationTitle("Today")
             .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Picker("Mode", selection: modeBinding) {
-                        ForEach(WorkPersonalMode.allCases) { m in
-                            Text(m.label).tag(m)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(maxWidth: 200)
-                }
-            }
             .refreshable {
                 await store.refresh()
             }

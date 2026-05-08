@@ -7,16 +7,41 @@ final class DigestStore {
     var digest: Digest?
     var loading: Bool = false
     var error: String?
-    var mode: WorkPersonalMode {
-        didSet {
-            UserDefaults.standard.set(mode.rawValue, forKey: "digestMode")
-            Task { await refresh() }
+
+    // mode is owned by AppMode; this store mirrors it read-only for BFF requests
+    private(set) var mode: WorkPersonalMode
+
+    nonisolated(unsafe) private var modeObserver: NSObjectProtocol?
+
+    init(mode: WorkPersonalMode = .work) {
+        self.mode = mode
+        subscribeToModeChanges()
+    }
+
+    deinit {
+        if let obs = modeObserver {
+            NotificationCenter.default.removeObserver(obs)
         }
     }
 
-    init() {
-        let saved = UserDefaults.standard.string(forKey: "digestMode") ?? ""
-        self.mode = WorkPersonalMode(rawValue: saved) ?? .work
+    // MARK: - Mode subscription (brain-split: clears before re-fetch)
+
+    private func subscribeToModeChanges() {
+        modeObserver = NotificationCenter.default.addObserver(
+            forName: .vibeosModeChanged,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let self else { return }
+            let raw = notification.userInfo?["mode"] as? String ?? "work"
+            let newMode = WorkPersonalMode(rawValue: raw) ?? .work
+            Task { @MainActor in
+                // BRAIN-SPLIT SAFETY: clear stale data before fetching new mode
+                self.digest = nil
+                self.mode = newMode
+                await self.refresh()
+            }
+        }
     }
 
     // MARK: - Refresh
@@ -31,7 +56,6 @@ final class DigestStore {
             let fetched = try await APIClient.shared.get(path, as: Digest.self)
             self.digest = fetched
         } catch let apiError as APIError {
-            // If BFF endpoint is not yet live (404 / 501 / transport), fall back to mock
             switch apiError {
             case .status(let code, _) where code == 404 || code == 501 || code == 405:
                 self.digest = .mock(mode: mode)
@@ -39,7 +63,6 @@ final class DigestStore {
                 self.digest = .mock(mode: mode)
             default:
                 self.error = apiError.errorDescription ?? "Unknown error"
-                // Still show mock so the screen isn't empty
                 if self.digest == nil {
                     self.digest = .mock(mode: mode)
                 }
