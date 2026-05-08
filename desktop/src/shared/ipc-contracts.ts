@@ -342,6 +342,41 @@ export interface MeshMessagesPayload {
 }
 
 // -----------------------------------------------------------------------------
+// CC Fleet — Claude Code subprocess pool manager.
+// API keys NEVER appear in these payloads — read from env at spawn time.
+// -----------------------------------------------------------------------------
+
+/** Registered CC account descriptor (mirrors CCAccount from cc-fleet.types). */
+export interface CcFleetAccount {
+  id: string;
+  concurrencyMax: number;
+  tokensUsed5h: number;
+  lastResetAt: number;
+  status: 'idle' | 'busy' | 'rate-limited';
+}
+
+/** List payload returned by CC_FLEET_LIST. */
+export interface CcFleetListPayload {
+  accounts: CcFleetAccount[];
+}
+
+/** Job input for CC_FLEET_SUBMIT. */
+export interface CcFleetSubmitInput {
+  id: string;
+  prompt: string;
+  account?: string;
+  persona?: string;
+}
+
+/** Result returned by CC_FLEET_SUBMIT. */
+export interface CcFleetSubmitResult {
+  jobId: string;
+  account: string;
+  output: string;
+  durationMs: number;
+}
+
+// -----------------------------------------------------------------------------
 // Channel name constants. ALL ipc traffic uses these.
 // Naming convention: `rb.<domain>.<verb>` — matches design §1 contract.
 // -----------------------------------------------------------------------------
@@ -467,6 +502,10 @@ export const IPC = {
   COCKPIT_LIST_PANES: 'rb.cockpit.listPanes',
   /** M16: Open an external HTTPS URL (sponsor links, etc.). renderer → main. */
   APP_OPEN_EXTERNAL: 'rb.app.openExternal',
+  /** CC Fleet: list registered accounts. renderer → main. */
+  CC_FLEET_LIST: 'rb.ccFleet.list',
+  /** CC Fleet: submit a job. renderer → main. */
+  CC_FLEET_SUBMIT: 'rb.ccFleet.submit',
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];
@@ -560,6 +599,12 @@ export interface RokibrainBridgeApi {
     listPanes: () => Promise<CockpitListPanesResponse>;
     /** M06a: subscribe to output pushed from main; returns unsubscribe fn. */
     onOutput: (handler: (payload: CockpitOutputPayload) => void) => () => void;
+  };
+  ccFleet: {
+    /** List all registered CC accounts and their status. */
+    list: () => Promise<CcFleetListPayload>;
+    /** Submit a job to the CC fleet; resolves when the subprocess completes. */
+    submit: (input: CcFleetSubmitInput) => Promise<CcFleetSubmitResult>;
   };
   app: {
     quit: () => void;
