@@ -77,9 +77,14 @@ import {
   type TabId,
   type TabSwitchPayload,
   type VoiceTogglePayload,
+  type VoiceRecordStopInput,
+  type VoiceTranscriptResult,
+  type VoicePushToBffInput,
+  type VoicePushToBffResult,
 } from '../shared/ipc-contracts';
 import { FleetManager } from '../daemon/cc-fleet/fleet-manager';
 import { TmuxChild } from '../daemon/children/tmux/tmux-child';
+import { VoiceChild } from '../daemon/children/voice/voice-child';
 import type {
   SupervisorInboundMessage,
   SupervisorOutboundMessage,
@@ -96,6 +101,7 @@ import * as gh from './gh';
 import { captureScreenshot } from './screenshot';
 import { deleteSecret, getSecret, listSecrets, setSecret } from './secrets';
 import { initTelemetry, reportCrash } from './telemetry';
+import { toggleQuickbar } from './quickbar';
 
 // ---- module state ----------------------------------------------------------
 
@@ -144,6 +150,28 @@ let pendingWsPortResolvers: Array<(p: DaemonWsPortPayload) => void> = [];
 // Manages Claude Code subprocess pool; accounts registered from env at startup.
 // API keys read from env at spawn time — never stored in process state.
 const ccFleet = new FleetManager();
+
+// ---- M11: VoiceChild (main-side) -------------------------------------------
+// A VoiceChild instance is kept in the main process so that audio buffers sent
+// via IPC from the renderer can be transcribed without crossing the
+// utilityProcess boundary (structured-clone doesn't guarantee zero-copy for
+// large ArrayBuffers in all Electron versions). The daemon also registers a
+// VoiceChild for supervisor health monitoring.
+// Hardwall §14: audio bytes NEVER hit disk — stay in RAM through transcription.
+const mainVoiceChild = new VoiceChild(
+  { id: 'voice-main', platform: 'voice' },
+  {
+    whisperBinaryPath:
+      process.env['VIBEOS_WHISPER_PATH'] ?? 'whisper-cpp',
+    modelPath:
+      process.env['VIBEOS_WHISPER_MODEL'] ?? 'model.bin',
+  },
+);
+
+// Probe binary on startup (non-blocking; child degrades gracefully if missing).
+void mainVoiceChild.start().catch((err) => {
+  console.warn('[voice] main-side VoiceChild start error (degraded):', err);
+});
 
 // ---- autoupdater stub (M13 wires real signing) -----------------------------
 
@@ -623,6 +651,83 @@ function registerIpcHandlers(): void {
       };
     },
   );
+
+  // M11: Quickbar toggle (⌥-Space → registered in registerHotkeys; also
+  // callable from renderer for button-driven toggle in the quickbar itself).
+  ipcMain.handle(IPC.QUICKBAR_TOGGLE, () => {
+    toggleQuickbar();
+  });
+
+  // M11: Voice — stop recording and transcribe.
+  // Renderer sends the audio buffer as a Uint8Array over structured clone.
+  // Hardwall §14: we convert to Node Buffer and pipe to whisper via stdin —
+  // NEVER write to disk.
+  ipcMain.handle(
+    IPC.VOICE_RECORD_STOP_AND_TRANSCRIBE,
+    async (_evt, input: VoiceRecordStopInput): Promise<VoiceTranscriptResult> => {
+      // Structured clone sends Uint8Array — wrap in Node Buffer (zero-copy view).
+      const audioBuffer = Buffer.from(input.audioData.buffer ?? input.audioData);
+      return mainVoiceChild.transcribe(audioBuffer);
+    },
+  );
+
+  // M11: Push a completed utterance to BFF /voice/utterance.
+  ipcMain.handle(
+    IPC.VOICE_PUSH_TO_BFF,
+    async (_evt, input: VoicePushToBffInput): Promise<VoicePushToBffResult> => {
+      return pushUtteranceToBff(input);
+    },
+  );
+}
+
+// ---- M11: BFF voice push ---------------------------------------------------
+
+/**
+ * POST a completed utterance to BFF /voice/utterance.
+ * Reads JWT from safeStorage (same path as auth M12). Fails gracefully when
+ * BFF is unreachable or not yet enrolled.
+ * Text-only — no audio bytes cross this call (hardwall §14).
+ */
+async function pushUtteranceToBff(
+  input: VoicePushToBffInput,
+): Promise<VoicePushToBffResult> {
+  try {
+    const jwt = await getSecret('bff_jwt');
+    const endpoint = await getSecret('bff_endpoint');
+    const base = (endpoint ?? 'https://app.rokibrain.com').replace(/\/$/, '');
+    const url = `${base}/voice/utterance`;
+
+    if (!jwt) {
+      return { success: false, error: 'not enrolled — no JWT in store' };
+    }
+
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${jwt}`,
+      },
+      body: JSON.stringify({
+        text: input.text,
+        capturedAt: input.capturedAt,
+        source: 'desktop-quickbar',
+      }),
+    });
+
+    if (!resp.ok) {
+      return {
+        success: false,
+        error: `BFF returned ${resp.status} ${resp.statusText}`,
+      };
+    }
+
+    const body = (await resp.json()) as { task_id?: string };
+    return { success: true, taskId: body.task_id };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[voice] pushUtteranceToBff error:', msg);
+    return { success: false, error: msg };
+  }
 }
 
 // ---- mesh backend client ---------------------------------------------------
@@ -821,6 +926,16 @@ function registerHotkeys(): void {
 
   const voiceAccel = process.platform === 'darwin' ? 'Cmd+Shift+V' : 'Ctrl+Shift+V';
   globalShortcut.register(voiceAccel, () => toggleVoice());
+
+  // M11: ⌥-Space (Alt+Space) → toggle voice quickbar.
+  // Configurable via VIBEOS_QUICKBAR_HOTKEY env for overrides (e.g. on Linux
+  // where Alt+Space may conflict with WM shortcuts).
+  const quickbarAccel =
+    process.env['VIBEOS_QUICKBAR_HOTKEY'] ??
+    (process.platform === 'darwin' ? 'Alt+Space' : 'Ctrl+Alt+Space');
+  globalShortcut.register(quickbarAccel, () => {
+    toggleQuickbar();
+  });
 
   const pauseAccel = process.platform === 'darwin' ? 'Cmd+Shift+P' : 'Ctrl+Shift+P';
   globalShortcut.register(pauseAccel, () => togglePause());

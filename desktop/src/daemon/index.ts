@@ -33,6 +33,7 @@ import { EnvJwtAuth, DaemonWsServer } from './ws-server';
 import type { SupervisorStatus, ChildState } from './types';
 import { WaChild } from './children/wa/wa-child';
 import { TmuxChild } from './children/tmux/tmux-child';
+import { VoiceChild } from './children/voice/voice-child';
 
 // -----------------------------------------------------------------------------
 // IPC envelope between main and daemon utilityProcess.
@@ -156,6 +157,16 @@ export async function bootstrapDaemon(
     );
     log('info', 'tmux child registered (MESH_TMUX_ENABLED default=on)');
   }
+
+  // ---- M11: VoiceChild registration (always registered; degrades gracefully) --
+  // Binary probe happens in start(). If whisper-cpp is missing, voice-child
+  // enters degraded mode and returns the install banner on transcribe().
+  // Override binary via VIBEOS_WHISPER_PATH; model via VIBEOS_WHISPER_MODEL.
+  supervisor.register(
+    { id: 'voice', platform: 'voice' },
+    async (ctx) => new VoiceChild(ctx),
+  );
+  log('info', 'voice child registered');
 
   const ws = new DaemonWsServer({
     auth: new EnvJwtAuth(),

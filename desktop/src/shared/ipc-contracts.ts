@@ -430,6 +430,55 @@ export const DIGEST_GENERATE = 'rb.digest.generate' as const;
 export const DIGEST_LATEST = 'rb.digest.latest' as const;
 
 // -----------------------------------------------------------------------------
+// M11: Voice quickbar IPC contracts
+// VOICE_RECORD_START   : renderer → main: start audio capture session
+// VOICE_RECORD_STOP    : renderer → main: stop capture + transcribe; returns transcript
+// VOICE_PUSH_TO_BFF    : renderer → main: POST text to BFF /voice/utterance
+// Hardwall §14: audio bytes NEVER leave the renderer as-is; only transcribed text
+// crosses IPC. No file paths, no blob references.
+// -----------------------------------------------------------------------------
+
+/** Input for starting a voice capture session. */
+export interface VoiceRecordStartPayload {
+  /** Originating quickbar session ID (renderer-generated UUID). */
+  sessionId: string;
+}
+
+/** Input to stop recording and transcribe. */
+export interface VoiceRecordStopInput {
+  /** Same session ID from the start call. */
+  sessionId: string;
+  /**
+   * WebM/Opus audio data captured by MediaRecorder in the renderer.
+   * Sent as Uint8Array over IPC (contextBridge serialises to ArrayBuffer).
+   * NEVER written to disk — stays in RAM through transcription.
+   */
+  audioData: Uint8Array;
+}
+
+/** Transcript returned by main after whisper.cpp finishes. */
+export interface VoiceTranscriptResult {
+  text: string;
+  durationMs: number;
+  /** True when whisper.cpp binary is missing; text contains install instructions. */
+  degraded?: boolean;
+}
+
+/** Input to push a completed utterance to BFF /voice/utterance. */
+export interface VoicePushToBffInput {
+  text: string;
+  /** ISO 8601 — when the utterance was captured. */
+  capturedAt: string;
+}
+
+/** Result from BFF push (may fail gracefully). */
+export interface VoicePushToBffResult {
+  success: boolean;
+  taskId?: string;
+  error?: string;
+}
+
+// -----------------------------------------------------------------------------
 // Channel name constants. ALL ipc traffic uses these.
 // Naming convention: `rb.<domain>.<verb>` — matches design §1 contract.
 // -----------------------------------------------------------------------------
@@ -559,6 +608,14 @@ export const IPC = {
   CC_FLEET_LIST: 'rb.ccFleet.list',
   /** CC Fleet: submit a job. renderer → main. */
   CC_FLEET_SUBMIT: 'rb.ccFleet.submit',
+  /** M11: Voice quickbar — start recording session. renderer → main. */
+  VOICE_RECORD_START: 'rb.voice.recordStart',
+  /** M11: Voice quickbar — stop recording + transcribe. renderer → main (invoke). */
+  VOICE_RECORD_STOP_AND_TRANSCRIBE: 'rb.voice.recordStopAndTranscribe',
+  /** M11: Voice quickbar — push transcript to BFF /voice/utterance. renderer → main. */
+  VOICE_PUSH_TO_BFF: 'rb.voice.pushToBff',
+  /** M11: Voice quickbar — toggle quickbar visibility. renderer → main (invoke). */
+  QUICKBAR_TOGGLE: 'rb.quickbar.toggle',
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];
@@ -658,6 +715,16 @@ export interface RokibrainBridgeApi {
     list: () => Promise<CcFleetListPayload>;
     /** Submit a job to the CC fleet; resolves when the subprocess completes. */
     submit: (input: CcFleetSubmitInput) => Promise<CcFleetSubmitResult>;
+  };
+  quickbar: {
+    /** M11: Toggle quickbar window visibility (Alt+Space handler). */
+    toggle: () => Promise<void>;
+    /** M11: Start recording in voice child. */
+    recordStart: (payload: VoiceRecordStartPayload) => Promise<void>;
+    /** M11: Stop recording + transcribe via whisper.cpp. Returns transcript. */
+    recordStopAndTranscribe: (input: VoiceRecordStopInput) => Promise<VoiceTranscriptResult>;
+    /** M11: Push finalized utterance text to BFF /voice/utterance. */
+    pushToBff: (input: VoicePushToBffInput) => Promise<VoicePushToBffResult>;
   };
   digest: {
     /**
