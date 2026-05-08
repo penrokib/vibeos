@@ -3526,6 +3526,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/libsodium-wrappers@npm:^0.8.2":
+  version: 0.8.2
+  resolution: "@types/libsodium-wrappers@npm:0.8.2"
+  dependencies:
+    libsodium-wrappers: "npm:*"
+  checksum: 10c0/c19cffdad50b49e9c8e9a5c036803e6dbd345f5b81aadd875360487fc06f4f58c3f02b0e6c991e809c56d3fddb290d27c5a555fe69148e655e4c053b747417e9
+  languageName: node
+  linkType: hard
+
 "@types/methods@npm:^1.1.4":
   version: 1.1.4
   resolution: "@types/methods@npm:1.1.4"
@@ -4004,6 +4013,7 @@ __metadata:
     "@testing-library/jest-dom": "npm:^6.9.1"
     "@testing-library/react": "npm:^16.3.2"
     "@testing-library/user-event": "npm:^14.6.1"
+    "@types/libsodium-wrappers": "npm:^0.8.2"
     "@types/node": "npm:^22"
     "@types/react": "npm:^19"
     "@types/react-dom": "npm:^19"
@@ -4015,6 +4025,7 @@ __metadata:
     electron-vite: "npm:^2.3.0"
     happy-dom: "npm:^20.9.0"
     jsdom: "npm:^29.1.1"
+    libsodium-wrappers: "npm:^0.8.4"
     msw: "npm:^2.14.3"
     react: "npm:^19.0.0"
     react-dom: "npm:^19.0.0"
@@ -8859,6 +8870,22 @@ __metadata:
   version: 1.12.43
   resolution: "libphonenumber-js@npm:1.12.43"
   checksum: 10c0/b082dbe60091a68399e543031298e53ba9efd6b170e42f4962c61b115da458cda42bbf1caae49db490bde0cf1fbd7e23a4faaf2e77e395781bd74da526d45d40
+  languageName: node
+  linkType: hard
+
+"libsodium-wrappers@npm:*, libsodium-wrappers@npm:^0.8.4":
+  version: 0.8.4
+  resolution: "libsodium-wrappers@npm:0.8.4"
+  dependencies:
+    libsodium: "npm:^0.8.0"
+  checksum: 10c0/d1348354e1b55b4c50e972a597903966227932ce348ffe2cde61b19b4c459edaf511d055c2047fe5ae006f170015d6d1735acb232231ecf4707eed22388458a0
+  languageName: node
+  linkType: hard
+
+"libsodium@npm:^0.8.0":
+  version: 0.8.4
+  resolution: "libsodium@npm:0.8.4"
+  checksum: 10c0/257b71e6a01d48d3e016f59cc01ec0eae9bb145027045fe33783e9d01fd6879cbaca043ea445e36dc3acd128989769634b19ecd9f7b16a7f3b010094148eb367
   languageName: node
   linkType: hard
 
