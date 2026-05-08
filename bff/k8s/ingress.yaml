@@ -1,0 +1,50 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vibeos-bff
+  namespace: vibeos-prod
+  annotations:
+    # cert-manager issues TLS certs automatically via Let's Encrypt.
+    # Ensure cert-manager + letsencrypt-prod ClusterIssuer are installed on the cluster.
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+
+    # Traefik (k3s default ingress) annotations.
+    # If using nginx-ingress, swap traefik.* for nginx.ingress.kubernetes.io/*.
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+
+    # Strip /mcp prefix when proxying to the BFF so the NestJS router
+    # sees /mcp/:rest internally. Remove this annotation if the BFF
+    # already handles the /mcp prefix natively.
+    # traefik.ingress.kubernetes.io/rewrite-target: /mcp/$1
+  labels:
+    app: vibeos-bff
+    app.kubernetes.io/name: vibeos-bff
+    app.kubernetes.io/part-of: vibeos
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - vibeos.app
+      secretName: vibeos-app-tls
+  rules:
+    - host: vibeos.app
+      http:
+        paths:
+          # MCP relay path — Claude remote MCP endpoint
+          - path: /mcp/
+            pathType: Prefix
+            backend:
+              service:
+                name: vibeos-bff
+                port:
+                  number: 80
+
+          # All other traffic → BFF
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: vibeos-bff
+                port:
+                  number: 80

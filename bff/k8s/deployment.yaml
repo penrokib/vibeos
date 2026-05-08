@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vibeos-bff
+  namespace: vibeos-prod
+  labels:
+    app: vibeos-bff
+    app.kubernetes.io/name: vibeos-bff
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: vibeos
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vibeos-bff
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: vibeos-bff
+        app.kubernetes.io/name: vibeos-bff
+    spec:
+      # Graceful shutdown — allow in-flight requests to drain
+      terminationGracePeriodSeconds: 30
+
+      containers:
+        - name: bff
+          # Scaleway Container Registry — image tag is overridden by deploy/build-and-push.sh
+          image: rg.fr-par.scw.cloud/vibeos/bff:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 4000
+              protocol: TCP
+
+          # All runtime secrets injected from Kubernetes Secret (never baked into image).
+          # Create the secret BEFORE applying this manifest — see secrets.example.yaml.
+          envFrom:
+            - secretRef:
+                name: vibeos-bff-secrets
+
+          # Optional: static non-secret env overrides
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "4000"
+
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+
+          # Readiness: pod receives traffic only when /health returns 200
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+            successThreshold: 1
+
+          # Liveness: pod is restarted if /health stops responding
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4000
+            initialDelaySeconds: 20
+            periodSeconds: 15
+            failureThreshold: 4
+
+          # /health is @Public() and returns { status: "ok" } without DB access.
+          # The pod will pass probes even when DATABASE_URL is temporarily unreachable.
