@@ -33,6 +33,9 @@ struct RootView: View {
 struct MainTabView: View {
     var body: some View {
         TabView {
+            TodayView()
+                .tabItem { Label("Today", systemImage: "sun.max.fill") }
+
             HomeView()
                 .tabItem { Label("Home", systemImage: "house.fill") }
 
