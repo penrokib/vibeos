@@ -86,6 +86,13 @@ afterAll(() => server.close());
     merge: async () => ({ success: false, message: 'stub' }),
     openShell: async () => {},
   },
+  drafts: {
+    // Cycle 17: real send pipeline wired — tests mock empty list for now.
+    // Tests that exercise approve/reject should override these in beforeEach.
+    list: async () => ({ drafts: [] }),
+    approve: async () => ({ status: 'sent' as const, messageId: 'test-msg-001' }),
+    reject: async () => {},
+  },
   app: {
     quit: () => {},
     version: '0.1.0-test',

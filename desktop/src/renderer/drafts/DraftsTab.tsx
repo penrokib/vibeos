@@ -1,29 +1,57 @@
 // =============================================================================
-// rokibrain.app — Drafts Tab (M07)
+// rokibrain.app — Drafts Tab (Cycle 17)
 // -----------------------------------------------------------------------------
 // List /agency/drafts/pending, expand-row preview, approve/reject actions.
 // Keyboard shortcuts: ⌘⇧A approve top, ⌘⇧R reject top.
 //
+// Cycle 17 changes:
+//   - Approve button now calls window.rokibrain.drafts.approve() via real IPC.
+//   - Reject button calls window.rokibrain.drafts.reject() via real IPC.
+//   - Draft list loaded via window.rokibrain.drafts.list().
+//   - Refusal surfaces inline as a red badge with reason text.
+//   - Toast on success (sent).
+//   - NEVER optimistic for send — row only removed on confirmed 'sent' result.
+//
 // Hard walls:
 //   - NEVER auto-approve (explicit user action required).
-//   - All API calls via main process (renderer cannot access api-client directly).
+//   - Refusal UI must surface the reason text (never silently drop).
+//   - All API calls via main process IPC (renderer cannot access api-client directly).
 // =============================================================================
 
 import type { JSX } from 'react';
-import { useCallback, useEffect, useState } from 'react';
-import type { Draft } from '../../shared/api-client';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { DraftItem, DraftApproveResult } from '../../shared/ipc-contracts';
 import { DraftRow } from './DraftRow';
 
+interface DraftItemWithState extends DraftItem {
+  /** Set when the last approve attempt was refused (anti-ban gate). */
+  refusalReason?: string;
+}
+
+/** Simple toast notification. */
+interface Toast {
+  id: string;
+  message: string;
+  kind: 'success' | 'error';
+}
+
 export function DraftsTab(): JSX.Element {
-  const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [drafts, setDrafts] = useState<DraftItemWithState[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [processing, setProcessing] = useState<Set<string>>(new Set());
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const toastTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
-  // Load drafts on mount
   useEffect(() => {
-    loadDrafts();
+    void loadDrafts();
+    return () => {
+      // Clean up toast timers on unmount
+      for (const timer of toastTimers.current.values()) {
+        clearTimeout(timer);
+      }
+    };
   }, []);
 
   // Keyboard shortcuts: ⌘⇧A approve top, ⌘⇧R reject top
@@ -44,16 +72,24 @@ export function DraftsTab(): JSX.Element {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [drafts, processing]);
 
+  function showToast(message: string, kind: 'success' | 'error') {
+    const id = `toast_${Date.now()}_${Math.random()}`;
+    const toast: Toast = { id, message, kind };
+    setToasts((prev) => [...prev, toast]);
+
+    const timer = setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+      toastTimers.current.delete(id);
+    }, 3500);
+    toastTimers.current.set(id, timer);
+  }
+
   async function loadDrafts() {
     setLoading(true);
     setError(null);
     try {
-      // TODO: Wire through IPC when M02 daemon is ready
-      // For now, mock the data shape. The await ensures callers see loading=true
-      // for at least one microtask, which is the correct async contract.
-      await Promise.resolve();
-      const mockDrafts: Draft[] = [];
-      setDrafts(mockDrafts);
+      const result = await window.rokibrain.drafts.list();
+      setDrafts(result.drafts.map((d) => ({ ...d })));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load drafts');
     } finally {
@@ -65,22 +101,47 @@ export function DraftsTab(): JSX.Element {
     if (processing.has(draftId)) return;
 
     setProcessing((prev) => new Set(prev).add(draftId));
-    try {
-      // TODO: Wire through IPC to main → api-client
-      // await window.rokibrain.drafts.approve(draftId, { approver: 'roki@dewx.com' });
+    // Clear any previous refusal badge for this draft
+    setDrafts((prev) =>
+      prev.map((d) => (d.id === draftId ? { ...d, refusalReason: undefined } : d)),
+    );
 
-      // Optimistic update
-      setDrafts((prev) => prev.filter((d) => d.id !== draftId));
+    let result: DraftApproveResult;
+    try {
+      result = await window.rokibrain.drafts.approve({ draftId });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to approve draft');
-      // Rollback on error
-      await loadDrafts();
-    } finally {
+      const msg = err instanceof Error ? err.message : 'Failed to send draft';
+      setError(msg);
       setProcessing((prev) => {
         const next = new Set(prev);
         next.delete(draftId);
         return next;
       });
+      return;
+    }
+
+    setProcessing((prev) => {
+      const next = new Set(prev);
+      next.delete(draftId);
+      return next;
+    });
+
+    if (result.status === 'sent') {
+      // Remove from list — confirmed sent
+      setDrafts((prev) => prev.filter((d) => d.id !== draftId));
+      showToast('Message sent', 'success');
+    } else if (result.status === 'refused') {
+      // Surface refusal inline — row stays, red badge shows reason
+      const reason = result.reason ?? 'send refused by anti-ban gate';
+      setDrafts((prev) =>
+        prev.map((d) => (d.id === draftId ? { ...d, refusalReason: reason } : d)),
+      );
+      showToast(`Refused: ${reason}`, 'error');
+    } else {
+      // status === 'error'
+      const reason = result.reason ?? 'send error';
+      setError(`Send failed: ${reason}`);
+      showToast(`Send error: ${reason}`, 'error');
     }
   }
 
@@ -89,14 +150,10 @@ export function DraftsTab(): JSX.Element {
 
     setProcessing((prev) => new Set(prev).add(draftId));
     try {
-      // TODO: Wire through IPC to main → api-client
-      // await window.rokibrain.drafts.reject(draftId, {});
-
-      // Optimistic update
+      await window.rokibrain.drafts.reject({ draftId });
       setDrafts((prev) => prev.filter((d) => d.id !== draftId));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to reject draft');
-      // Rollback on error
       await loadDrafts();
     } finally {
       setProcessing((prev) => {
@@ -156,7 +213,7 @@ export function DraftsTab(): JSX.Element {
           <div className="text-sm text-neutral-300">{error}</div>
           <button
             type="button"
-            onClick={loadDrafts}
+            onClick={() => void loadDrafts()}
             className="mt-4 rounded-md bg-neutral-800 px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-700"
           >
             Retry
@@ -183,6 +240,25 @@ export function DraftsTab(): JSX.Element {
 
   return (
     <div className="flex h-full flex-col">
+      {/* Toast container */}
+      {toasts.length > 0 && (
+        <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+          {toasts.map((t) => (
+            <div
+              key={t.id}
+              className={[
+                'rounded-md px-4 py-2 text-sm shadow-lg',
+                t.kind === 'success'
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-red-700 text-white',
+              ].join(' ')}
+            >
+              {t.message}
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Header */}
       <header className="border-b border-neutral-800 px-6 py-4">
         <div className="flex items-center justify-between">
@@ -194,7 +270,7 @@ export function DraftsTab(): JSX.Element {
           </div>
           <button
             type="button"
-            onClick={loadDrafts}
+            onClick={() => void loadDrafts()}
             className="rounded-md bg-neutral-800 px-3 py-1.5 text-xs text-neutral-300 hover:bg-neutral-700"
           >
             Refresh
@@ -206,15 +282,25 @@ export function DraftsTab(): JSX.Element {
       <div className="flex-1 overflow-auto p-4">
         <div className="space-y-2">
           {drafts.map((draft) => (
-            <DraftRow
-              key={draft.id}
-              draft={draft}
-              expanded={expandedId === draft.id}
-              processing={processing.has(draft.id)}
-              onToggleExpand={handleToggleExpand}
-              onApprove={handleApprove}
-              onReject={handleReject}
-            />
+            <div key={draft.id}>
+              {/* Refusal badge — shown when last approve was refused */}
+              {draft.refusalReason && (
+                <div className="mb-1 flex items-center gap-1.5 rounded-md border border-red-900/50 bg-red-950/20 px-3 py-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                  <span className="text-xs text-red-400">
+                    Refused: {draft.refusalReason}
+                  </span>
+                </div>
+              )}
+              <DraftRow
+                draft={draft}
+                expanded={expandedId === draft.id}
+                processing={processing.has(draft.id)}
+                onToggleExpand={handleToggleExpand}
+                onApprove={handleApprove}
+                onReject={handleReject}
+              />
+            </div>
           ))}
         </div>
       </div>

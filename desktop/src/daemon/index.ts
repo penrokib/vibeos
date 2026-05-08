@@ -29,6 +29,8 @@ import {
   setBffCounterClient,
   type BffCounterClient,
 } from './anti-ban';
+import { SendPipeline } from './send-pipeline';
+import type { SendResult } from './send-pipeline';
 import { Supervisor } from './supervisor';
 import { EnvJwtAuth, DaemonWsServer } from './ws-server';
 import type { SupervisorStatus, ChildState } from './types';
@@ -51,7 +53,9 @@ export type SupervisorInboundMessage =
   | { kind: 'resume' }
   | { kind: 'unlock'; childId: string }
   | { kind: 'getStatus' }
-  | { kind: 'getWsPort' };
+  | { kind: 'getWsPort' }
+  /** Cycle 17: send a draft via SendPipeline; reply with sendDraftResult. */
+  | { kind: 'sendDraft'; requestId: string; draftId: string };
 
 export type SupervisorOutboundMessage =
   | { kind: 'ready'; wsPort: number; status: SupervisorStatus }
@@ -63,7 +67,9 @@ export type SupervisorOutboundMessage =
       childId: string;
       state: ChildState;
       message?: string;
-    };
+    }
+  /** Cycle 17: result of a sendDraft request. */
+  | { kind: 'sendDraftResult'; requestId: string; result: SendResult };
 
 // -----------------------------------------------------------------------------
 // Runtime parentPort handle — utilityProcess provides this. We import lazily
@@ -155,6 +161,7 @@ export interface DaemonBootstrapResult {
   supervisor: Supervisor;
   ws: DaemonWsServer;
   meshMcp: MeshMcpServer;
+  sendPipeline: SendPipeline;
   /** Returns the MCP port (same as WS port — MCP shares the daemon WS port). */
   getMcpPort: () => number;
   shutdown: () => Promise<void>;
@@ -250,12 +257,29 @@ export async function bootstrapDaemon(
   const fleetManager = new FleetManager();
   const digestGenerator = new DigestGenerator(fleetManager);
 
+  // ---- Cycle 17: SendPipeline ------------------------------------------------
+  // Single authoritative send path. Anti-ban client is already wired above via
+  // setBffCounterClient(). SendPipeline uses getBffCounterClient() internally
+  // via withAntiBan(), so it picks up whatever client was installed.
+  const pipelineAntiBanClient: BffCounterClient = opts.bffClient ?? {
+    // Fallback no-op client for test environments where bffClient not injected.
+    // withAntiBan() handles null client by refusing — this is only reached if
+    // setBffCounterClient() was called with a real client already.
+    increment: async () => ({ allowed: false, reasons: ['no_anti_ban_client_installed'] } as const),
+  };
+  const sendPipeline = new SendPipeline({
+    supervisor,
+    antiBanClient: pipelineAntiBanClient,
+  });
+  log('info', 'SendPipeline instantiated (Cycle 17)');
+
   const meshMcp = new MeshMcpServer({
     supervisor,
     searchService,
     digestGenerator,
+    sendPipeline,
   });
-  log('info', 'MeshMcpServer instantiated (Cycle 16)');
+  log('info', 'MeshMcpServer instantiated (Cycle 16 + Cycle 17 sendPipeline)');
 
   if (!opts.skipMcpTokenFile) {
     try {
@@ -268,7 +292,7 @@ export async function bootstrapDaemon(
 
   const parent = opts.parentPort ?? getParentPort();
   if (parent) {
-    wireParentPort(parent, supervisor);
+    wireParentPort(parent, supervisor, sendPipeline);
   }
 
   const getMcpPort = (): number => ws.port;
@@ -287,16 +311,16 @@ export async function bootstrapDaemon(
     });
   }
 
-  return { supervisor, ws, meshMcp, getMcpPort, shutdown };
+  return { supervisor, ws, meshMcp, sendPipeline, getMcpPort, shutdown };
 }
 
-function wireParentPort(parent: ParentPortLike, supervisor: Supervisor): void {
+function wireParentPort(parent: ParentPortLike, supervisor: Supervisor, sendPipeline: SendPipeline): void {
   supervisor.onStatusChange((status) => {
     parent.postMessage({ kind: 'status', status });
   });
 
   parent.on('message', (m) => {
-    void handleInbound(parent, supervisor, m.data);
+    void handleInbound(parent, supervisor, sendPipeline, m.data);
   });
 
   // Best-effort clean shutdown when main quits.
@@ -311,6 +335,7 @@ function wireParentPort(parent: ParentPortLike, supervisor: Supervisor): void {
 async function handleInbound(
   parent: ParentPortLike,
   supervisor: Supervisor,
+  sendPipeline: SendPipeline,
   msg: SupervisorInboundMessage,
 ): Promise<void> {
   try {
@@ -336,6 +361,12 @@ async function handleInbound(
       case 'getWsPort':
         parent.postMessage({ kind: 'wsPort', port: supervisor.status().wsPort });
         break;
+      case 'sendDraft': {
+        // Cycle 17: SendPipeline handles all anti-ban gates + child.send().
+        const result = await sendPipeline.sendDraft(msg.draftId);
+        parent.postMessage({ kind: 'sendDraftResult', requestId: msg.requestId, result });
+        break;
+      }
       default: {
         const _exhaustive: never = msg;
         void _exhaustive;

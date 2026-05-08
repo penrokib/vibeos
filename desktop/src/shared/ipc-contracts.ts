@@ -430,6 +430,49 @@ export const DIGEST_GENERATE = 'rb.digest.generate' as const;
 export const DIGEST_LATEST = 'rb.digest.latest' as const;
 
 // -----------------------------------------------------------------------------
+// Cycle 17 — Drafts send pipeline IPC contracts
+// DRAFTS_APPROVE: renderer → main → SendPipeline.sendDraft → returns SendResult
+// DRAFTS_REJECT:  renderer → main → BFF /agency/drafts/:id/reject
+// DRAFTS_LIST:    renderer → main → BFF /agency/drafts/pending
+// -----------------------------------------------------------------------------
+
+export type DraftSendStatus = 'sent' | 'refused' | 'error';
+
+/** Result of approving (sending) a draft via SendPipeline. */
+export interface DraftApproveResult {
+  status: DraftSendStatus;
+  messageId?: string;
+  /** Populated when status is 'refused' or 'error'. */
+  reason?: string;
+}
+
+/** Input for DRAFTS_APPROVE. */
+export interface DraftApproveInput {
+  draftId: string;
+}
+
+/** Input for DRAFTS_REJECT. */
+export interface DraftRejectInput {
+  draftId: string;
+  reason?: string;
+}
+
+/** Draft item shape returned by DRAFTS_LIST. */
+export interface DraftItem {
+  id: string;
+  persona: string;
+  target: string;
+  channel: string;
+  body: string;
+  created_at: string;
+}
+
+/** Result of DRAFTS_LIST. */
+export interface DraftsListResult {
+  drafts: DraftItem[];
+}
+
+// -----------------------------------------------------------------------------
 // M11: Voice quickbar IPC contracts
 // VOICE_RECORD_START   : renderer → main: start audio capture session
 // VOICE_RECORD_STOP    : renderer → main: stop capture + transcribe; returns transcript
@@ -604,6 +647,12 @@ export const IPC = {
   COCKPIT_LIST_PANES: 'rb.cockpit.listPanes',
   /** M16: Open an external HTTPS URL (sponsor links, etc.). renderer → main. */
   APP_OPEN_EXTERNAL: 'rb.app.openExternal',
+  /** Cycle 17: Approve (send) a draft via SendPipeline. renderer → main. */
+  DRAFTS_APPROVE: 'rb.drafts.approve',
+  /** Cycle 17: Reject a draft. renderer → main. */
+  DRAFTS_REJECT: 'rb.drafts.reject',
+  /** Cycle 17: List pending drafts. renderer → main. */
+  DRAFTS_LIST: 'rb.drafts.list',
   /** CC Fleet: list registered accounts. renderer → main. */
   CC_FLEET_LIST: 'rb.ccFleet.list',
   /** CC Fleet: submit a job. renderer → main. */
@@ -715,6 +764,19 @@ export interface RokibrainBridgeApi {
     list: () => Promise<CcFleetListPayload>;
     /** Submit a job to the CC fleet; resolves when the subprocess completes. */
     submit: (input: CcFleetSubmitInput) => Promise<CcFleetSubmitResult>;
+  };
+  drafts: {
+    /**
+     * Cycle 17: Approve a draft — runs the full send pipeline:
+     * anti-ban gates → child.send() → BFF status update.
+     * Returns a DraftApproveResult with status 'sent' | 'refused' | 'error'.
+     * NEVER optimistic — waits for real send result.
+     */
+    approve: (input: DraftApproveInput) => Promise<DraftApproveResult>;
+    /** Reject a draft (no send — moves to rejected state in BFF). */
+    reject: (input: DraftRejectInput) => Promise<void>;
+    /** List pending drafts from BFF /agency/drafts/pending. */
+    list: () => Promise<DraftsListResult>;
   };
   quickbar: {
     /** M11: Toggle quickbar window visibility (Alt+Space handler). */

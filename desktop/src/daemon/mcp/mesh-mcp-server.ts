@@ -27,6 +27,7 @@ import type { DigestGenerator } from '../digest/digest-generator';
 import type { SearchScope } from '../search/search.types';
 import type { WaChild } from '../children/wa/wa-child';
 import type { BaseMeshChild } from '../base-child';
+import type { SendPipeline } from '../send-pipeline';
 
 // ---------------------------------------------------------------------------
 // BFF base URL (injected via env; never hardcoded)
@@ -174,6 +175,8 @@ export interface MeshMcpServerOptions {
   supervisor: Supervisor;
   searchService: SearchService;
   digestGenerator: DigestGenerator;
+  /** Cycle 17: injected SendPipeline for mesh.send_draft real wiring. */
+  sendPipeline?: SendPipeline;
 }
 
 /**
@@ -185,9 +188,11 @@ export class MeshMcpServer {
 
   private readonly supervisor: Supervisor;
   private readonly searchService: SearchService;
+  private readonly sendPipeline: SendPipeline | undefined;
   constructor(opts: MeshMcpServerOptions) {
     this.supervisor = opts.supervisor;
     this.searchService = opts.searchService;
+    this.sendPipeline = opts.sendPipeline;
     // digestGenerator reserved for cycle 17 — digest signal wiring.
     void opts.digestGenerator;
 
@@ -406,49 +411,37 @@ export class MeshMcpServer {
     );
 
     // ------------------------------------------------------------------
-    // mesh.send_draft — anti-ban gates → routes to child → child.send()
+    // mesh.send_draft — Cycle 17: real SendPipeline wiring
+    // Anti-ban gates → SendPipeline.sendDraft → status update → result.
+    // HARD WALL: send ALWAYS goes through SendPipeline. Never call
+    // child.send() directly from MCP surface.
     // ------------------------------------------------------------------
     mcp.tool(
       'mesh.send_draft',
-      'Send an approved draft via its account child. Goes through anti-ban gates.',
+      'Send a draft via its account child. Goes through anti-ban gates via SendPipeline. Result includes status (sent|refused|error) and reason on refusal.',
       {
         draft_id: z.string().describe('Draft ID to send'),
       },
       async (args: { draft_id: string }, extra: { authInfo?: { token?: string } }) => {
         this.checkAuth(extra?.authInfo?.token);
-        // Fetch draft from BFF first
-        const draftResult = await bffGet<{ draft: { account: string; to: string; text: string; status: string } }>(
-          `/mesh/drafts/${encodeURIComponent(args.draft_id)}`,
-        );
-        if ('error' in draftResult) {
-          return {
-            content: [{ type: 'text' as const, text: JSON.stringify(draftResult) }],
-          };
-        }
-        const draft = draftResult.draft;
-        if (!draft || draft.status !== 'approved') {
+
+        if (!this.sendPipeline) {
           return {
             content: [{
               type: 'text' as const,
-              text: JSON.stringify({ error: 'DRAFT_NOT_APPROVED', detail: 'Draft must be approved before sending', status: draft?.status }),
+              text: JSON.stringify({ error: 'SEND_PIPELINE_NOT_CONFIGURED', detail: 'SendPipeline not injected into MeshMcpServer' }),
             }],
           };
         }
-        const child = findWaChild(this.supervisor, draft.account);
-        if (!child) {
-          return {
-            content: [{ type: 'text' as const, text: JSON.stringify({ error: 'ACCOUNT_NOT_FOUND', account: draft.account }) }],
-          };
-        }
+
         try {
-          // child.send() internally wraps in withAntiBan — hardwall enforced
-          await child.send(draft.to, draft.text);
+          const result = await this.sendPipeline.sendDraft(args.draft_id);
           return {
-            content: [{ type: 'text' as const, text: JSON.stringify({ sent: true, draft_id: args.draft_id }) }],
+            content: [{ type: 'text' as const, text: JSON.stringify(result) }],
           };
         } catch (err) {
           return {
-            content: [{ type: 'text' as const, text: JSON.stringify({ error: 'SEND_FAILED', detail: String(err) }) }],
+            content: [{ type: 'text' as const, text: JSON.stringify({ error: 'SEND_PIPELINE_ERROR', detail: String(err) }) }],
           };
         }
       },

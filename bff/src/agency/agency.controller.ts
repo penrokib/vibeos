@@ -31,6 +31,32 @@ class RejectDraftDto {
   reason?: string;
 }
 
+/** Body for POST /agency/drafts/:id/refuse (from SendPipeline anti-ban refusal). */
+class RefuseDraftDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  reason?: string;
+}
+
+/** Body for POST /agency/drafts/:id/sent (from SendPipeline successful send). */
+class SentDraftDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  messageId?: string;
+}
+
+/** Body for POST /agency/drafts/:id/error (from SendPipeline send error). */
+class ErrorDraftDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  reason?: string;
+}
+
+/** Body for GET /agency/drafts/:id (single draft fetch by SendPipeline). */
+
 /**
  * Agency controller — read-only HTTP surface over the 1,243 personas living
  * in `~/Projects/rokibrain/personas/<slug>/`.
@@ -69,6 +95,11 @@ export class AgencyController {
     return this.drafts.listPending();
   }
 
+  @Get("drafts/:id")
+  getDraft(@Param("id") id: string) {
+    return this.drafts.getOne(id);
+  }
+
   @Post("drafts/:id/approve")
   approveDraft(
     @Param("id") id: string,
@@ -84,6 +115,48 @@ export class AgencyController {
     @CurrentUser() user: JwtPayload,
   ) {
     return this.drafts.reject(id, user.email, body.reason);
+  }
+
+  /**
+   * POST /agency/drafts/:id/refuse
+   * Called by SendPipeline when anti-ban gate refuses the send.
+   * Updates draft status to 'refused' and records the reasons.
+   */
+  @Post("drafts/:id/refuse")
+  refuseDraft(
+    @Param("id") id: string,
+    @Body() body: RefuseDraftDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.drafts.refuse(id, user.email, body.reason);
+  }
+
+  /**
+   * POST /agency/drafts/:id/sent
+   * Called by SendPipeline on successful child.send().
+   * Updates draft status to 'sent' and records the messageId.
+   */
+  @Post("drafts/:id/sent")
+  markDraftSent(
+    @Param("id") id: string,
+    @Body() body: SentDraftDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.drafts.markSent(id, user.email, body.messageId);
+  }
+
+  /**
+   * POST /agency/drafts/:id/error
+   * Called by SendPipeline when child.send() throws.
+   * Updates draft status to 'error' for retry/investigation.
+   */
+  @Post("drafts/:id/error")
+  markDraftError(
+    @Param("id") id: string,
+    @Body() body: ErrorDraftDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.drafts.markError(id, user.email, body.reason);
   }
 
   // Note: literal routes (`/stats`, `/health`) are declared before `/:slug`

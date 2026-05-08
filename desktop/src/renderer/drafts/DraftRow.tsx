@@ -5,10 +5,20 @@
 // =============================================================================
 
 import type { JSX } from 'react';
-import type { Draft } from '../../shared/api-client';
+import type { DraftItem } from '../../shared/ipc-contracts';
+
+// DraftRow accepts DraftItem (from ipc-contracts) as of Cycle 17.
+// DraftItem maps: persona→persona_slug, target→contact_external_id, body→body.
 
 interface DraftRowProps {
-  draft: Draft;
+  /** Extended with optional refusalReason (set by DraftsTab when anti-ban refused). */
+  draft: DraftItem & {
+    persona_slug?: string | null;
+    contact_external_id?: string;
+    refused_reasons?: string[] | null;
+    similarity_score?: number | null;
+    refusalReason?: string;
+  };
   expanded: boolean;
   processing: boolean;
   onToggleExpand: (draftId: string) => void;
@@ -26,6 +36,9 @@ export function DraftRow({
 }: DraftRowProps): JSX.Element {
   const createdDate = new Date(draft.created_at);
   const timeAgo = getTimeAgo(createdDate);
+  // Field aliasing: DraftItem uses persona/target/body; legacy Draft used persona_slug/contact_external_id/body
+  const personaSlug = draft.persona_slug ?? draft.persona ?? 'unknown';
+  const contactId = draft.contact_external_id ?? draft.target ?? '';
 
   return (
     <div
@@ -46,13 +59,13 @@ export function DraftRow({
         <div className="flex-1 space-y-1">
           <div className="flex items-center gap-2">
             <span className="text-xs font-medium text-emerald-400">
-              {draft.persona_slug ?? 'unknown'}
+              {personaSlug}
             </span>
             <span className="text-xs text-neutral-500">→</span>
             <span className="text-xs text-neutral-400">
-              {draft.contact_external_id}
+              {contactId}
             </span>
-            {draft.similarity_score !== null &&
+            {draft.similarity_score != null &&
               draft.similarity_score >= 0.7 && (
                 <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] text-amber-400">
                   similar {(draft.similarity_score * 100).toFixed(0)}%

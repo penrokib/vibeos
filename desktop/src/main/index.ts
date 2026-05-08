@@ -81,6 +81,10 @@ import {
   type VoiceTranscriptResult,
   type VoicePushToBffInput,
   type VoicePushToBffResult,
+  type DraftApproveInput,
+  type DraftApproveResult,
+  type DraftRejectInput,
+  type DraftsListResult,
 } from '../shared/ipc-contracts';
 import { FleetManager } from '../daemon/cc-fleet/fleet-manager';
 import { TmuxChild } from '../daemon/children/tmux/tmux-child';
@@ -89,6 +93,7 @@ import type {
   SupervisorInboundMessage,
   SupervisorOutboundMessage,
 } from '../daemon';
+import type { SendResult } from '../daemon/send-pipeline';
 import {
   getAuthStatus,
   handleEnrollDeepLink,
@@ -145,6 +150,8 @@ let supervisorStatus: SupervisorStatusPayload = {
 // pending request bookkeeping for daemon-IPC round-trips
 let pendingStatusResolvers: Array<(s: SupervisorStatusPayload) => void> = [];
 let pendingWsPortResolvers: Array<(p: DaemonWsPortPayload) => void> = [];
+// Cycle 17: pending sendDraft round-trips (requestId → resolve)
+const pendingSendDraftResolvers = new Map<string, (r: SendResult) => void>();
 
 // ---- CC Fleet manager (singleton) ------------------------------------------
 // Manages Claude Code subprocess pool; accounts registered from env at startup.
@@ -678,6 +685,69 @@ function registerIpcHandlers(): void {
       return pushUtteranceToBff(input);
     },
   );
+
+  // Cycle 17: Drafts send pipeline
+  // DRAFTS_APPROVE: renderer → main → daemon (sendDraft msg) → SendPipeline.sendDraft
+  // DRAFTS_REJECT:  renderer → main → BFF /agency/drafts/:id/reject
+  // DRAFTS_LIST:    renderer → main → BFF /agency/drafts/pending
+  ipcMain.handle(
+    IPC.DRAFTS_APPROVE,
+    async (_evt, input: DraftApproveInput): Promise<DraftApproveResult> => {
+      if (!daemonProcess || !daemonReady) {
+        return { status: 'error', reason: 'daemon_not_ready' };
+      }
+      const requestId = `dr_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      return new Promise<DraftApproveResult>((resolve) => {
+        pendingSendDraftResolvers.set(requestId, (result: SendResult) => {
+          resolve(result as DraftApproveResult);
+        });
+        sendDaemon({ kind: 'sendDraft', requestId, draftId: input.draftId });
+        // Safety timeout — never hang the renderer
+        setTimeout(() => {
+          if (pendingSendDraftResolvers.has(requestId)) {
+            pendingSendDraftResolvers.delete(requestId);
+            resolve({ status: 'error', reason: 'daemon_timeout' });
+          }
+        }, 30_000);
+      });
+    },
+  );
+
+  ipcMain.handle(
+    IPC.DRAFTS_REJECT,
+    async (_evt, input: DraftRejectInput): Promise<void> => {
+      const bffUrl = (await getSecret('bff_endpoint')) ?? process.env['ROKIBRAIN_BFF_URL'] ?? 'http://localhost:3000';
+      const jwt = (await getSecret('bff_jwt')) ?? process.env['ROKIBRAIN_DEV_JWT'] ?? '';
+      const base = bffUrl.replace(/\/$/, '');
+      await fetch(`${base}/agency/drafts/${encodeURIComponent(input.draftId)}/reject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${jwt}`,
+        },
+        body: JSON.stringify({ reason: input.reason }),
+      });
+    },
+  );
+
+  ipcMain.handle(
+    IPC.DRAFTS_LIST,
+    async (): Promise<DraftsListResult> => {
+      const bffUrl = (await getSecret('bff_endpoint')) ?? process.env['ROKIBRAIN_BFF_URL'] ?? 'http://localhost:3000';
+      const jwt = (await getSecret('bff_jwt')) ?? process.env['ROKIBRAIN_DEV_JWT'] ?? '';
+      const base = bffUrl.replace(/\/$/, '');
+      try {
+        const resp = await fetch(`${base}/agency/drafts/pending`, {
+          headers: { Authorization: `Bearer ${jwt}` },
+        });
+        if (!resp.ok) return { drafts: [] };
+        const drafts = (await resp.json()) as DraftsListResult['drafts'];
+        return { drafts: Array.isArray(drafts) ? drafts : [] };
+      } catch {
+        return { drafts: [] };
+      }
+    },
+  );
 }
 
 // ---- M11: BFF voice push ---------------------------------------------------
@@ -884,6 +954,15 @@ function handleDaemonMessage(m: SupervisorOutboundMessage): void {
     case 'childStateChange':
       // No-op at the main level; renderer subscribes to supervisorBroadcast.
       break;
+    case 'sendDraftResult': {
+      // Cycle 17: resolve pending sendDraft IPC round-trip.
+      const resolve = pendingSendDraftResolvers.get(m.requestId);
+      if (resolve) {
+        pendingSendDraftResolvers.delete(m.requestId);
+        resolve(m.result);
+      }
+      break;
+    }
     default: {
       const _exhaustive: never = m;
       void _exhaustive;
