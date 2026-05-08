@@ -19,30 +19,29 @@ afterEach(() => server.resetHandlers());
 // Clean up after all tests
 afterAll(() => server.close());
 
-// Mock window.rokibrain (provided by Electron contextBridge)
-globalThis.window = {
-  ...globalThis.window,
-  rokibrain: {
-    daemon: {
-      onStatus: () => () => {},
-      getWsPort: async () => ({ port: 0 }),
-    },
-    tabs: {
-      switch: async () => {},
-      onSwitch: () => () => {},
-    },
-    pause: {
-      toggle: async () => ({ paused: false }),
-      onToggle: () => () => {},
-    },
-    voice: {
-      toggle: async () => ({ listening: false }),
-      onToggle: () => () => {},
-    },
-    app: {
-      quit: () => {},
-      version: '0.1.0-test',
-      platform: 'darwin',
-    },
+// Mock window.rokibrain (provided by Electron contextBridge).
+// IMPORTANT: assign directly on the existing window object — never replace it with
+// a spread plain-object, which loses prototype methods like addEventListener().
+(globalThis.window as any).rokibrain = {
+  daemon: {
+    onStatus: () => () => {},
+    getWsPort: async () => ({ port: 0 }),
   },
-} as any;
+  tabs: {
+    switch: async () => {},
+    onSwitch: () => () => {},
+  },
+  pause: {
+    toggle: async () => ({ paused: false }),
+    onToggle: () => () => {},
+  },
+  voice: {
+    toggle: async () => ({ listening: false }),
+    onToggle: () => () => {},
+  },
+  app: {
+    quit: () => {},
+    version: '0.1.0-test',
+    platform: 'darwin',
+  },
+};

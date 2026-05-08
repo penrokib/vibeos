@@ -11,6 +11,8 @@ import {
   type AuthEnrollPayload,
   type AuthStatusPayload,
   type CaptureScreenshotPayload,
+  type DaemonChildRestartRequest,
+  type DaemonEmergencyStopPayload,
   type DaemonStatusPayload,
   type DaemonWsPortPayload,
   type ListBugsInput,
@@ -21,9 +23,9 @@ import {
   type MeshMessagesPayload,
   type MeshMessagesRequest,
   type PauseTogglePayload,
+  type PrsListPayload,
   type PrsMergeRequest,
   type PrsMergeResponse,
-  type PrsListPayload,
   type PrsOpenShellRequest,
   type RokibrainBridgeApi,
   type SecretKey,
@@ -32,6 +34,7 @@ import {
   type SecretsSetPayload,
   type SubmitBugInput,
   type SubmitBugResult,
+  type SupervisorStatusPayload,
   type TabId,
   type TabSwitchPayload,
   type VoiceTogglePayload,
@@ -47,6 +50,14 @@ const api: RokibrainBridgeApi = {
   daemon: {
     onStatus: (handler) => subscribe<DaemonStatusPayload>(IPC.DAEMON_STATUS, handler),
     getWsPort: () => ipcRenderer.invoke(IPC.DAEMON_WS_PORT) as Promise<DaemonWsPortPayload>,
+    getSupervisorStatus: () =>
+      ipcRenderer.invoke(IPC.DAEMON_SUPERVISOR_STATUS) as Promise<SupervisorStatusPayload>,
+    onSupervisorStatus: (handler) =>
+      subscribe<SupervisorStatusPayload>(IPC.DAEMON_SUPERVISOR_BROADCAST, handler),
+    restartChild: (req: DaemonChildRestartRequest) =>
+      ipcRenderer.invoke(IPC.DAEMON_CHILD_RESTART, req) as Promise<void>,
+    emergencyStop: (payload?: DaemonEmergencyStopPayload) =>
+      ipcRenderer.invoke(IPC.DAEMON_EMERGENCY_STOP, payload) as Promise<void>,
   },
   tabs: {
     switch: (tab: TabId) => ipcRenderer.invoke(IPC.TABS_SWITCH, tab) as Promise<void>,

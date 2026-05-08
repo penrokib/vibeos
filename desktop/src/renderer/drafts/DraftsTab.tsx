@@ -49,7 +49,9 @@ export function DraftsTab(): JSX.Element {
     setError(null);
     try {
       // TODO: Wire through IPC when M02 daemon is ready
-      // For now, mock the data shape
+      // For now, mock the data shape. The await ensures callers see loading=true
+      // for at least one microtask, which is the correct async contract.
+      await Promise.resolve();
       const mockDrafts: Draft[] = [];
       setDrafts(mockDrafts);
     } catch (err) {

@@ -10,12 +10,21 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()],
     build: {
       outDir: 'out/main',
+      // Multi-entry: main + daemon. Daemon is forked by main via
+      // utilityProcess.fork(<__dirname>/daemon.js), so it sits next to index.js
+      // in out/main/. (Co-locating keeps dev/prod paths identical.)
       lib: {
-        entry: resolve(__dirname, 'src/main/index.ts'),
+        entry: {
+          index: resolve(__dirname, 'src/main/index.ts'),
+          daemon: resolve(__dirname, 'src/daemon/index.ts'),
+        },
         formats: ['cjs'],
       },
       rollupOptions: {
-        output: { entryFileNames: 'index.js' },
+        output: {
+          entryFileNames: '[name].js',
+          chunkFileNames: 'chunks/[name]-[hash].js',
+        },
       },
     },
     resolve: {
