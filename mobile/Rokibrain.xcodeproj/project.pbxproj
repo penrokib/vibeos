@@ -33,6 +33,13 @@
 		AA0010210000000000000001 /* DevicesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010210000000000000001 /* DevicesStore.swift */; };
 		AA0010220000000000000001 /* DevicesTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010220000000000000001 /* DevicesTab.swift */; };
 		AA0010230000000000000001 /* TmuxPaneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010230000000000000001 /* TmuxPaneView.swift */; };
+		AA0010300000000000000001 /* OnboardingState.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010300000000000000001 /* OnboardingState.swift */; };
+		AA0010310000000000000001 /* OnboardingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010310000000000000001 /* OnboardingStore.swift */; };
+		AA0010320000000000000001 /* OnboardingFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010320000000000000001 /* OnboardingFlow.swift */; };
+		AA0010330000000000000001 /* WelcomeStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010330000000000000001 /* WelcomeStep.swift */; };
+		AA0010340000000000000001 /* SignInStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010340000000000000001 /* SignInStep.swift */; };
+		AA0010350000000000000001 /* PairMacStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010350000000000000001 /* PairMacStep.swift */; };
+		AA0010360000000000000001 /* EnablePushStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010360000000000000001 /* EnablePushStep.swift */; };
 		AA00100D0000000000000001 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AB00100D0000000000000001 /* Preview Assets.xcassets */; };
 /* End PBXBuildFile section */
 
@@ -66,6 +73,13 @@
 		AB0010210000000000000001 /* DevicesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevicesStore.swift; sourceTree = "<group>"; };
 		AB0010220000000000000001 /* DevicesTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevicesTab.swift; sourceTree = "<group>"; };
 		AB0010230000000000000001 /* TmuxPaneView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TmuxPaneView.swift; sourceTree = "<group>"; };
+		AB0010300000000000000001 /* OnboardingState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingState.swift; sourceTree = "<group>"; };
+		AB0010310000000000000001 /* OnboardingStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingStore.swift; sourceTree = "<group>"; };
+		AB0010320000000000000001 /* OnboardingFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlow.swift; sourceTree = "<group>"; };
+		AB0010330000000000000001 /* WelcomeStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeStep.swift; sourceTree = "<group>"; };
+		AB0010340000000000000001 /* SignInStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInStep.swift; sourceTree = "<group>"; };
+		AB0010350000000000000001 /* PairMacStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairMacStep.swift; sourceTree = "<group>"; };
+		AB0010360000000000000001 /* EnablePushStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnablePushStep.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -117,6 +131,7 @@
 				AB0010120000000000000001 /* InboxThread.swift */,
 				AB0010160000000000000001 /* DraftEnhanced.swift */,
 				AB0010200000000000000001 /* MeshDevice.swift */,
+				AB0010300000000000000001 /* OnboardingState.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -131,6 +146,7 @@
 				AB0010130000000000000001 /* InboxStore.swift */,
 				AB0010170000000000000001 /* DraftsStore.swift */,
 				AB0010210000000000000001 /* DevicesStore.swift */,
+				AB0010310000000000000001 /* OnboardingStore.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -150,8 +166,21 @@
 				AB0010190000000000000001 /* DraftDetailView.swift */,
 				AB0010220000000000000001 /* DevicesTab.swift */,
 				AB0010230000000000000001 /* TmuxPaneView.swift */,
+				AE0030070000000000000001 /* Onboarding */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		AE0030070000000000000001 /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				AB0010320000000000000001 /* OnboardingFlow.swift */,
+				AB0010330000000000000001 /* WelcomeStep.swift */,
+				AB0010340000000000000001 /* SignInStep.swift */,
+				AB0010350000000000000001 /* PairMacStep.swift */,
+				AB0010360000000000000001 /* EnablePushStep.swift */,
+			);
+			path = Onboarding;
 			sourceTree = "<group>";
 		};
 		AE0030060000000000000001 /* Preview Content */ = {
@@ -257,6 +286,13 @@
 				AA0010210000000000000001 /* DevicesStore.swift in Sources */,
 				AA0010220000000000000001 /* DevicesTab.swift in Sources */,
 				AA0010230000000000000001 /* TmuxPaneView.swift in Sources */,
+				AA0010300000000000000001 /* OnboardingState.swift in Sources */,
+				AA0010310000000000000001 /* OnboardingStore.swift in Sources */,
+				AA0010320000000000000001 /* OnboardingFlow.swift in Sources */,
+				AA0010330000000000000001 /* WelcomeStep.swift in Sources */,
+				AA0010340000000000000001 /* SignInStep.swift in Sources */,
+				AA0010350000000000000001 /* PairMacStep.swift in Sources */,
+				AA0010360000000000000001 /* EnablePushStep.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
