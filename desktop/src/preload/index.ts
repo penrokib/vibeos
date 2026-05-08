@@ -9,6 +9,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 import {
   IPC,
   type AuthEnrollPayload,
+  type OpenExternalPayload,
   type AuthStatusPayload,
   type CaptureScreenshotPayload,
   type CockpitClosePaneRequest,
@@ -132,6 +133,11 @@ const api: RokibrainBridgeApi = {
     quit: () => ipcRenderer.send(IPC.APP_QUIT),
     version: process.env.npm_package_version ?? '0.1.0',
     platform: process.platform,
+    openExternal: (url: string) =>
+      ipcRenderer.invoke(
+        IPC.APP_OPEN_EXTERNAL,
+        { url } satisfies OpenExternalPayload,
+      ) as Promise<void>,
   },
 };
 
