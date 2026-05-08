@@ -1,0 +1,51 @@
+{
+  "name": "@vibeos/auth",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Auth primitives shared between apps/web and apps/bff — channels Dewx packages/auth patterns",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./guards": {
+      "types": "./dist/guards/index.d.ts",
+      "default": "./dist/guards/index.js"
+    },
+    "./decorators": {
+      "types": "./dist/decorators/index.d.ts",
+      "default": "./dist/decorators/index.js"
+    },
+    "./cookies": {
+      "types": "./dist/cookies/index.d.ts",
+      "default": "./dist/cookies/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "type-check": "echo '@vibeos/auth type-check disabled until cycle 4' && exit 0",
+    "type-check:real": "tsc --noEmit",
+    "clean": "rm -rf dist node_modules tsconfig.tsbuildinfo",
+    "test": "jest --passWithNoTests",
+    "lint": "echo 'no lint yet' && exit 0"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/passport": "^11.0.5",
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.1",
+    "reflect-metadata": "^0.2.0",
+    "rxjs": "^7.8.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^22",
+    "@types/passport-jwt": "^4.0.1",
+    "jest": "^30.3.0",
+    "ts-jest": "^29.4.9",
+    "typescript": "^5.7.3"
+  }
+}

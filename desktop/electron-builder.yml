@@ -1,0 +1,131 @@
+# =============================================================================
+# rokibrain.app — electron-builder config (M13 production)
+# -----------------------------------------------------------------------------
+# Owns: signing/notarisation/Sparkle wiring per design §6
+#   state/rokibrain-app-v1-design-2026-05-07.md
+#
+# Local dev: `yarn dist:mac` produces an unsigned DMG when APPLE_* env vars
+# are absent (build/notarize.js exits with a warning — see that file).
+#
+# CI: GitHub Actions `.github/workflows/desktop-release.yml` injects all
+# secrets (CSC_LINK, CSC_KEY_PASSWORD, APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD,
+# APPLE_TEAM_ID, WIN_CSC_LINK, WIN_CSC_KEY_PASSWORD) at job time.
+#
+# DO NOT hardcode appId / productName anywhere else — this file is the source
+# of truth (per dispatch hardwall: "NEVER hardcode the appId or productName
+# in build script — read from electron-builder.yml").
+# =============================================================================
+
+appId: com.rokibrain.app
+productName: rokibrain
+copyright: Copyright © 2026 Rokibul Hasan
+
+# In a Yarn 4 workspace, electron-builder cannot always resolve `electron`
+# from `apps/desktop/node_modules` because deps hoist to the repo root.
+# Pinning electronVersion sidesteps the resolver and matches what the root
+# workspace installs (kept in sync with package.json devDependency range).
+electronVersion: 32.3.3
+
+directories:
+  buildResources: build
+  output: dist
+
+# Files included in the app bundle. Keep tight — anything outside `out/` and
+# `package.json` is unintentional.
+files:
+  - out/**/*
+  - package.json
+  - "!**/.DS_Store"
+  - "!**/*.map"
+  - "!**/{tsconfig.json,tsconfig.tsbuildinfo}"
+
+# asar packaging — required for Electron security model.
+# asarUnpack: native .node addons (whisper.cpp / tdlib / better-sqlite3) and
+# any shipped binaries under resources/bin/ (whatsmeow, tmux helpers).
+asar: true
+asarUnpack:
+  - "**/*.node"
+  - "resources/bin/**"
+
+# -----------------------------------------------------------------------------
+# macOS — DMG, hardened runtime, notarised via afterSign hook.
+# -----------------------------------------------------------------------------
+# Note: notarisation is driven by build/notarize.js (afterSign), not by the
+# `mac.notarize` shorthand. The shorthand is left `false` so electron-builder
+# does not try to invoke its built-in notarytool path with no creds; the
+# explicit hook gives us a clean local-dev skip + clear CI logging.
+mac:
+  category: public.app-category.productivity
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  notarize: false
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+  artifactName: ${productName}-${version}-${arch}.${ext}
+
+dmg:
+  writeUpdateInfo: true
+  sign: false # signing happens at the .app level via mac.* above
+
+# -----------------------------------------------------------------------------
+# Linux — AppImage; no signing in v1 (per locked decision §6).
+# -----------------------------------------------------------------------------
+linux:
+  category: Network
+  target:
+    - target: AppImage
+      arch:
+        - x64
+        - arm64
+  artifactName: ${productName}-${version}-${arch}.${ext}
+  desktop:
+    entry:
+      Name: rokibrain
+      Comment: Personal mesh + agent control plane
+      Categories: Network;Office;Utility
+
+# -----------------------------------------------------------------------------
+# Windows — NSIS; signs with WIN_CSC_LINK if provided in CI, otherwise
+# unsigned (SmartScreen warning until reputation builds — Roki blocker #2).
+# -----------------------------------------------------------------------------
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  signtoolOptions:
+    signingHashAlgorithms:
+      - sha256
+  artifactName: ${productName}-${version}-${arch}.${ext}
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+
+# -----------------------------------------------------------------------------
+# Auto-update feed — generic provider per design §6.
+# Path is provisioned by Roki (design blocker #4 — M15 follow-up).
+# Format: electron-updater (latest-mac.yml / latest-linux.yml / latest.yml).
+# -----------------------------------------------------------------------------
+publish:
+  provider: generic
+  url: https://app.rokibrain.com/releases/desktop/
+  channel: latest
+
+# -----------------------------------------------------------------------------
+# afterSign hook — Apple notarisation via @electron/notarize (notarytool).
+# Skips cleanly when APPLE_* env vars are absent (local dev path).
+# -----------------------------------------------------------------------------
+afterSign: build/notarize.js
+
+# Electron download cache dir — keeps CI reproducible.
+electronDownload:
+  cache: .cache/electron

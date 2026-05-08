@@ -1,0 +1,450 @@
+// rokibrain — Prisma 6.19 schema (Phase 2 starter).
+// Single-tenant: every row implicitly belongs to Roki.
+// When the dashboard goes multi-actor, switch to the Dewx organizationId pattern (Class-A).
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Decision queue surfaced on app.rokibrain.com / route.
+/// Brain writes; dashboard reads; Roki taps approve/skip.
+model Decision {
+  id        String    @id @default(uuid()) @db.Uuid
+  title     String
+  body      String
+  status    String    @default("pending")
+  source    String?   @map("source")
+  createdAt DateTime  @default(now()) @map("created_at")
+  decidedAt DateTime? @map("decided_at")
+
+  @@index([status, createdAt])
+  @@map("decisions")
+}
+
+/// Audit log for every dashboard action.
+model AuditEvent {
+  id        String   @id @default(uuid()) @db.Uuid
+  actor     String
+  action    String
+  target    String?
+  payload   Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([actor, createdAt])
+  @@map("audit_events")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// bugs.rokibrain.com — unified bug-tasting system (Phase 1, 2026-05-04)
+// Additive only. See handoffs/bugs-rokibrain-com-spec.md for the full plan.
+// ─────────────────────────────────────────────────────────────────────────
+
+enum Severity {
+  P0
+  P1
+  P2
+  P3
+}
+
+enum BugStatus {
+  OPEN
+  CLAIMED
+  IN_PROGRESS
+  FIXED
+  VERIFIED
+  CLOSED
+  WONT_FIX
+  DUPLICATE
+}
+
+/// Registered application that bugs can be filed against.
+/// Apps self-register via `POST /apps` (typically from CI on each deploy).
+model App {
+  id        String       @id @default(uuid()) @db.Uuid
+  slug      String       @unique
+  name      String
+  baseUrl   String       @map("base_url")
+  repoPath  String?      @map("repo_path")
+  createdAt DateTime     @default(now()) @map("created_at")
+  features  AppFeature[]
+  bugs      Bug[]
+
+  @@map("apps")
+}
+
+/// Feature catalog entry. Testers click "Test this" → land on `url`.
+/// `(appId, slug)` is unique so re-registering an app upserts cleanly.
+model AppFeature {
+  id          String   @id @default(uuid()) @db.Uuid
+  appId       String   @map("app_id") @db.Uuid
+  app         App      @relation(fields: [appId], references: [id], onDelete: Cascade)
+  slug        String
+  title       String
+  description String
+  url         String
+  howto       String
+  tags        String[]
+  createdAt   DateTime @default(now()) @map("created_at")
+  bugs        Bug[]
+
+  @@unique([appId, slug])
+  @@index([appId])
+  @@map("app_features")
+}
+
+/// A reported bug. Lifecycle: OPEN → CLAIMED → IN_PROGRESS → FIXED → VERIFIED → CLOSED
+/// (or WONT_FIX / DUPLICATE terminal states).
+model Bug {
+  id            String       @id @default(uuid()) @db.Uuid
+  title         String
+  description   String
+  severity      Severity     @default(P2)
+  status        BugStatus    @default(OPEN)
+  appId         String       @map("app_id") @db.Uuid
+  app           App          @relation(fields: [appId], references: [id])
+  featureId     String?      @map("feature_id") @db.Uuid
+  feature       AppFeature?  @relation(fields: [featureId], references: [id])
+  reporter      String
+  reporterName  String?      @map("reporter_name")
+  reportedAt    DateTime     @default(now()) @map("reported_at")
+  claimedBy     String?      @map("claimed_by")
+  claimedAt     DateTime?    @map("claimed_at")
+  fixedAt       DateTime?    @map("fixed_at")
+  fixCommitSha  String?      @map("fix_commit_sha")
+  fixBranch     String?      @map("fix_branch")
+  verifiedBy    String?      @map("verified_by")
+  verifiedAt    DateTime?    @map("verified_at")
+  consoleLog    String?      @map("console_log")
+  networkErrors String?      @map("network_errors")
+  screenshotUrl String?      @map("screenshot_url")
+  videoUrl      String?      @map("video_url")
+  url           String?
+  userAgent     String?      @map("user_agent")
+  viewportSize  String?      @map("viewport_size")
+  comments      BugComment[]
+
+  @@index([status, reportedAt])
+  @@index([appId, status])
+  @@index([severity, status])
+  @@map("bugs")
+}
+
+/// Append-only comment thread on a bug.
+/// `author` is an email or `claude:<tab-id>` for automated progress notes.
+model BugComment {
+  id        String   @id @default(uuid()) @db.Uuid
+  bugId     String   @map("bug_id") @db.Uuid
+  bug       Bug      @relation(fields: [bugId], references: [id], onDelete: Cascade)
+  author    String
+  body      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([bugId, createdAt])
+  @@map("bug_comments")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Fleet Ops — machine registry, heartbeats, enrollment (Phase 5c, 2026-05-05)
+// Spec: handoffs/agency-v3-inventory/35-fleet-ops.md
+// ─────────────────────────────────────────────────────────────────────────
+
+/// Registered machine in Roki's fleet (M3, M1, BD-PC, Hetzner, Scaleway, future).
+/// Created via the enrollment approval flow — never auto-created.
+model FleetMachine {
+  id              String    @id @default(uuid()) @db.Uuid
+  machineId       String    @unique @map("machine_id")
+  hostname        String
+  hostAlias       String?   @map("host_alias") // m1, m3, winpc, etc.
+  os              String // darwin | linux | windows-wsl
+  publicIp        String?   @map("public_ip")
+  tailscaleIp     String?   @map("tailscale_ip")
+  publicKey       String?   @map("public_key")
+  role            String? // worker | orchestrator | testing
+  account         String? // dewx | dewx2 | ahn | kidiq
+  /// Per-machine HMAC secret for heartbeat auth. Set on enrollment approval.
+  /// Heartbeats sign machineId + lastHeartbeatAt with this secret.
+  heartbeatSecret String?   @map("heartbeat_secret")
+  enrolledAt      DateTime  @default(now()) @map("enrolled_at")
+  lastHeartbeatAt DateTime? @map("last_heartbeat_at")
+
+  @@map("fleet_machines")
+}
+
+/// Time-series heartbeat samples. One row per cron tick (~5 min) per machine.
+/// Index optimized for "latest heartbeat for machine X" queries.
+model FleetHeartbeat {
+  id                String   @id @default(uuid()) @db.Uuid
+  machineId         String   @map("machine_id")
+  personaCount      Int      @map("persona_count")
+  tmuxSessionCount  Int      @map("tmux_session_count")
+  ramGb             Float    @map("ram_gb")
+  cpuLoad           Float    @map("cpu_load")
+  /// { dewx: { used, limit }, dewx2: ..., ahn: ..., kidiq: ... }
+  accountQuota      Json     @map("account_quota")
+  lastActivePersona String?  @map("last_active_persona")
+  receivedAt        DateTime @default(now()) @map("received_at")
+
+  @@index([machineId, receivedAt])
+  @@map("fleet_heartbeats")
+}
+
+/// Pending machine enrollment. Created by `bin/install.sh`.
+/// Roki must explicitly approve via POST /fleet/enrollment/:id/approve —
+/// never auto-approved. tailscaleAuthkey is one-time-read (nulled after fetch).
+model FleetEnrollment {
+  id                 String    @id @default(uuid()) @db.Uuid
+  machineId          String    @map("machine_id")
+  hostname           String
+  os                 String
+  publicKey          String    @map("public_key")
+  requestedRole      String?   @map("requested_role")
+  /// pending_approval | approved | rejected
+  status             String    @default("pending_approval")
+  approvedBy         String?   @map("approved_by")
+  approvedAt         DateTime? @map("approved_at")
+  /// One-time fetch — nulled the first time the install script reads it.
+  tailscaleAuthkey   String?   @map("tailscale_authkey")
+  /// True after the install script has fetched the secrets. Prevents replay.
+  secretsFetchedAt   DateTime? @map("secrets_fetched_at")
+  /// JSON array of authorized SSH public keys to push to ~/.ssh/authorized_keys.
+  sshKeys            Json?     @map("ssh_keys")
+  /// JSON array of persona slugs to assign on first agent boot.
+  personaAssignments Json?     @map("persona_assignments")
+  account            String?
+  createdAt          DateTime  @default(now()) @map("created_at")
+
+  @@index([status, createdAt])
+  @@map("fleet_enrollments")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Knowledge / semantic search — pgvector (Phase 8, 2026-05-06)
+// Reads/writes go through `$queryRaw` in KnowledgeSearchService because
+// `Unsupported("vector(1536)")` has no first-class Prisma type. Prisma keeps
+// the column visible in the generated client (Bytes-shaped), but the BFF
+// only ever touches it via raw SQL.
+//
+// REQUIRES: `CREATE EXTENSION IF NOT EXISTS vector;` — the Phase 4 migration
+// SQL prepends this so the table create succeeds on a fresh DB.
+// ─────────────────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────────────
+// Brain-native devices + terminal sessions (Phase A, 2026-05-07)
+// Spec: plans/yeah-so-whatever-we-humming-torvalds.md
+//
+// Each device pairs once via POST /devices/pair (returns device-scoped JWT).
+// rokibrain-bridge daemon (m3-bridge) connects WS as `bridge`; iOS / macOS
+// apps connect WS as `client` and subscribe to a session. Sessions track
+// each named tmux pane the bridge mirrors so dashboards can show history.
+// ─────────────────────────────────────────────────────────────────────────
+
+/// A device paired to Roki's account: an iOS app, macOS tray, or the
+/// m3-bridge daemon. owner_email matches the JWT `sub`/`email` claim.
+model Device {
+  id         String            @id @default(uuid()) @db.Uuid
+  ownerEmail String            @map("owner_email")
+  deviceKind String            @map("device_kind") // ios | macos | m3-bridge
+  publicKey  String?           @map("public_key")
+  pairedAt   DateTime          @default(now()) @map("paired_at") @db.Timestamptz()
+  lastSeenAt DateTime?         @map("last_seen_at") @db.Timestamptz()
+  sessions   TerminalSession[]
+
+  @@index([ownerEmail])
+  @@map("devices")
+}
+
+/// A named tmux pane mirrored by an m3-bridge device. One row per session
+/// the bridge has ever opened (not per WS connection); endedAt marks close.
+model TerminalSession {
+  id          String    @id @default(uuid()) @db.Uuid
+  deviceId    String    @map("device_id") @db.Uuid
+  device      Device    @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  sessionName String    @map("session_name")
+  startedAt   DateTime  @default(now()) @map("started_at") @db.Timestamptz()
+  endedAt     DateTime? @map("ended_at") @db.Timestamptz()
+
+  @@index([deviceId])
+  @@map("terminal_sessions")
+}
+
+/// One embedded chunk of a persona's learnings.md or decisions.md.
+/// Re-running backfill for a persona DELETEs and re-INSERTs every row
+/// scoped to (persona, sourceFile) so duplicates never accumulate.
+/// 1536 dim matches OpenAI text-embedding-ada-002 / text-embedding-3-small.
+model LearningEmbedding {
+  id         String                       @id @default(uuid()) @db.Uuid
+  persona    String
+  sourceFile String                       @map("source_file")
+  chunkIdx   Int                          @map("chunk_idx")
+  content    String
+  embedding  Unsupported("vector(1536)")?
+  createdAt  DateTime                     @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@unique([persona, sourceFile, chunkIdx], name: "persona_source_chunk_uq")
+  @@index([persona])
+  @@index([persona, sourceFile])
+  @@map("learnings_embeddings")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Mesh — desktop app comms surface (M03, 2026-05-07)
+// Spec: state/rokibrain-app-v1-design-2026-05-07.md §4
+// All tables additive. citext + gen_random_uuid() rely on extensions
+// already loaded for previous migrations (pgcrypto + citext both seeded
+// by 2026_05_07_brain_native via Prisma defaults — re-create idempotent).
+// ─────────────────────────────────────────────────────────────────────────
+
+/// One physical install of rokibrain.app on a device. Distinct from the
+/// brain-native `Device` table (which tracks tmux-bridge / iOS pairings)
+/// — this is the desktop bundle's own pairing record per §4.
+model DeviceAppInstall {
+  id           String        @id @default(uuid()) @db.Uuid
+  ownerEmail   String        @map("owner_email") @db.Citext
+  deviceKind   String        @map("device_kind") // mac | linux | windows | ios | android
+  hostname     String?
+  osVersion    String?       @map("os_version")
+  appVersion   String?       @map("app_version")
+  publicKey    String        @map("public_key") // ed25519
+  pairedAt     DateTime      @default(now()) @map("paired_at") @db.Timestamptz()
+  lastSeenAt   DateTime?     @map("last_seen_at") @db.Timestamptz()
+  revokedAt    DateTime?     @map("revoked_at") @db.Timestamptz()
+  meshAccounts MeshAccount[]
+
+  @@unique([ownerEmail, publicKey])
+  @@index([ownerEmail])
+  @@map("device_app_install")
+}
+
+/// One per-platform account paired through a device install.
+/// `external_id` is platform-native (E.164 phone, @handle, email).
+model MeshAccount {
+  id              String           @id @default(uuid()) @db.Uuid
+  ownerEmail      String           @map("owner_email") @db.Citext
+  platform        String // whatsapp | telegram | discord | email | linkedin | x | instagram | signal_blocked | sms | slack
+  deviceId        String           @map("device_id") @db.Uuid
+  device          DeviceAppInstall @relation(fields: [deviceId], references: [id], onDelete: Restrict)
+  label           String
+  externalId      String?          @map("external_id")
+  countryCc       String?          @map("country_cc")
+  status          String           @default("pending") // pending | connected | qr_required | disconnected | frozen | banned
+  frozenUntil     DateTime?        @map("frozen_until") @db.Timestamptz()
+  policyJson      Json             @default("{}") @map("policy_json")
+  blackoutWindows Json             @default("[]") @map("blackout_windows")
+  pairedAt        DateTime?        @map("paired_at") @db.Timestamptz()
+  lastActiveAt    DateTime?        @map("last_active_at") @db.Timestamptz()
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz()
+
+  sessions  MeshSession[]
+  contacts  MeshContact[]
+  messages  MeshMessage[]
+  counters  MeshCounter[]
+  drafts    MeshDraft[]
+  actionLog MeshActionLog[]
+
+  @@unique([platform, externalId])
+  @@index([ownerEmail])
+  @@index([deviceId])
+  @@map("mesh_accounts")
+}
+
+/// Encrypted per-account session blob (whatsmeow .session, tdlib tdata, etc.).
+model MeshSession {
+  id           String      @id @default(uuid()) @db.Uuid
+  accountId    String      @map("account_id") @db.Uuid
+  account      MeshAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  sessionBlob  Bytes?      @map("session_blob")
+  encryptedDek Bytes       @map("encrypted_dek") // DEK wrapped by KEK in Keychain
+  rotatedAt    DateTime    @default(now()) @map("rotated_at") @db.Timestamptz()
+
+  @@map("mesh_sessions")
+}
+
+/// Per-account contact / thread.
+model MeshContact {
+  id          String        @id @default(uuid()) @db.Uuid
+  accountId   String        @map("account_id") @db.Uuid
+  account     MeshAccount   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  externalId  String        @map("external_id")
+  displayName String?       @map("display_name")
+  warmed      Boolean       @default(false)
+  firstSeenAt DateTime      @default(now()) @map("first_seen_at") @db.Timestamptz()
+  lastMsgAt   DateTime?     @map("last_msg_at") @db.Timestamptz()
+  messages    MeshMessage[]
+
+  @@unique([accountId, externalId])
+  @@map("mesh_contacts")
+}
+
+/// Inbox/outbox row. body_hash stored for audit (unhashed body in `body`).
+model MeshMessage {
+  id            String         @id @default(uuid()) @db.Uuid
+  accountId     String         @map("account_id") @db.Uuid
+  account       MeshAccount    @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  contactId     String?        @map("contact_id") @db.Uuid
+  contact       MeshContact?   @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  direction     String // 'in' | 'out'
+  body          String?
+  bodyHash      String         @map("body_hash")
+  mediaJson     Json           @default("[]") @map("media_json")
+  externalMsgId String?        @map("external_msg_id")
+  ts            DateTime       @db.Timestamptz()
+  auditId       String?        @map("audit_id") @db.Uuid
+  audit         MeshActionLog? @relation(fields: [auditId], references: [id])
+
+  @@index([accountId, ts(sort: Desc)])
+  @@index([contactId, ts(sort: Desc)])
+  @@map("mesh_messages")
+}
+
+/// Anti-ban counter buckets. Atomic upsert per §3.
+model MeshCounter {
+  accountId   String      @map("account_id") @db.Uuid
+  account     MeshAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  bucket      String // 'minute' | 'hour' | 'day' | 'unwarmed_day' | 'burst_60s'
+  bucketStart DateTime    @map("bucket_start") @db.Timestamptz()
+  count       Int
+
+  @@id([accountId, bucket, bucketStart])
+  @@index([bucketStart])
+  @@map("mesh_counters")
+}
+
+/// Pending / approved / rejected outbound drafts.
+model MeshDraft {
+  id                String      @id @default(uuid()) @db.Uuid
+  accountId         String      @map("account_id") @db.Uuid
+  account           MeshAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  contactExternalId String      @map("contact_external_id")
+  body              String
+  personaSlug       String?     @map("persona_slug")
+  createdAt         DateTime    @default(now()) @map("created_at") @db.Timestamptz()
+  approvedAt        DateTime?   @map("approved_at") @db.Timestamptz()
+  approvedBy        String?     @map("approved_by")
+  rejectedAt        DateTime?   @map("rejected_at") @db.Timestamptz()
+  rejectedBy        String?     @map("rejected_by")
+  refusedReasons    Json?       @map("refused_reasons")
+  similarityScore   Decimal?    @map("similarity_score") @db.Decimal(4, 3)
+
+  @@index([accountId])
+  @@map("mesh_drafts")
+}
+
+/// Append-only audit log: every send, refusal, disconnect, pair, warm, etc.
+model MeshActionLog {
+  id        String        @id @default(uuid()) @db.Uuid
+  accountId String?       @map("account_id") @db.Uuid
+  account   MeshAccount?  @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  action    String // 'send' | 'refused' | 'disconnect' | 'warm' | 'pair' | 'unpair' | 'draft.approve' | 'draft.reject'
+  payload   Json          @default("{}")
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz()
+  messages  MeshMessage[]
+
+  @@index([accountId, createdAt(sort: Desc)])
+  @@map("mesh_action_log")
+}

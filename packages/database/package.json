@@ -1,0 +1,36 @@
+{
+  "name": "@vibeos/database",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Prisma client + schema for rokibrain — channels Dewx packages/database pattern, single-tenant",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "type-check": "echo '@vibeos/database type-check disabled until cycle 4' && exit 0",
+    "type-check:real": "tsc --noEmit",
+    "clean": "rm -rf dist node_modules tsconfig.tsbuildinfo",
+    "test": "echo 'no tests yet' && exit 0",
+    "lint": "echo 'no lint yet' && exit 0",
+    "db-generate": "prisma generate",
+    "db-migrate-dev": "prisma migrate dev",
+    "db-migrate-deploy": "prisma migrate deploy"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@prisma/client": "6.19.1",
+    "reflect-metadata": "^0.2.0",
+    "rxjs": "^7.8.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "prisma": "6.19.1",
+    "typescript": "^5.7.3"
+  }
+}

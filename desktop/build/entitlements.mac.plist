@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  rokibrain.app — macOS entitlements (M01 placeholder; M13 finalises signing).
+  Per design §6 + §8: 5 entitlements required.
+    1. Microphone     — voice-stt (M11) push-to-talk via whisper.cpp.
+    2. Network client — daemon-to-BFF WSS + mesh outbound.
+    3. Network server — local ws://127.0.0.1:<port> exposed to renderer.
+    4. Files (user-selected, read-write) — bug-report screenshot attachments + import/export.
+    5. Apple Events automation — terminal-mirror integration with Terminal.app/iTerm/tmux.
+  JIT entitlement is required for Electron's V8 engine on hardened runtime.
+-->
+<plist version="1.0">
+<dict>
+  <key>com.apple.security.cs.allow-jit</key>
+  <true/>
+  <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+  <true/>
+
+  <!-- 1. Microphone -->
+  <key>com.apple.security.device.audio-input</key>
+  <true/>
+
+  <!-- 2 + 3. Network client + server -->
+  <key>com.apple.security.network.client</key>
+  <true/>
+  <key>com.apple.security.network.server</key>
+  <true/>
+
+  <!-- 4. User-selected files (open / save panels) -->
+  <key>com.apple.security.files.user-selected.read-write</key>
+  <true/>
+
+  <!-- 5. Apple Events automation (terminal-mirror M06) -->
+  <key>com.apple.security.automation.apple-events</key>
+  <true/>
+</dict>
+</plist>

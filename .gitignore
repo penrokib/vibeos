@@ -152,7 +152,7 @@ release/
 DerivedData/
 *.swiftpm/
 .build/
-Packages/
+mobile/**/Packages/
 
 # macOS
 .DS_Store
