@@ -5,6 +5,7 @@ import { AgencyModule } from "./agency/agency.module";
 import { AuditModule } from "./audit/audit.module";
 import { AuthModule } from "./auth/auth.module";
 import { BugsModule } from "./bugs/bugs.module";
+import { ComposeModule } from "./compose/compose.module";
 import { DecisionsModule } from "./decisions/decisions.module";
 import { DevicesModule } from "./devices/devices.module";
 import { DigestModule } from "./digest/digest.module";
@@ -42,6 +43,7 @@ import { VoiceModule } from "./voice/voice.module";
     LettaProxyModule,
     DevicesModule,
     MeshModule,
+    ComposeModule,
     PushModule,
     TerminalModule,
     VoiceModule,

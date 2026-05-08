@@ -41,6 +41,7 @@ import { MeshMcpServer } from './mcp/mesh-mcp-server';
 import { SearchService } from './search/search.service';
 import { DigestGenerator } from './digest/digest-generator';
 import { FleetManager } from './cc-fleet/fleet-manager';
+import { ComposePipeline } from './compose/compose-pipeline';
 
 // -----------------------------------------------------------------------------
 // IPC envelope between main and daemon utilityProcess.
@@ -162,6 +163,7 @@ export interface DaemonBootstrapResult {
   ws: DaemonWsServer;
   meshMcp: MeshMcpServer;
   sendPipeline: SendPipeline;
+  composePipeline: ComposePipeline;
   /** Returns the MCP port (same as WS port — MCP shares the daemon WS port). */
   getMcpPort: () => number;
   shutdown: () => Promise<void>;
@@ -273,13 +275,23 @@ export async function bootstrapDaemon(
   });
   log('info', 'SendPipeline instantiated (Cycle 17)');
 
+  // ---- Cycle 18: ComposePipeline --------------------------------------------
+  // One ComposePipeline per daemon instance — routes compose requests through
+  // the local FleetManager (CC subprocesses on user's Mac only — never BFF).
+  const composePipeline = new ComposePipeline({
+    fleet: fleetManager,
+    supervisor,
+  });
+  log('info', 'ComposePipeline instantiated (Cycle 18)');
+
   const meshMcp = new MeshMcpServer({
     supervisor,
     searchService,
     digestGenerator,
     sendPipeline,
+    composePipeline,
   });
-  log('info', 'MeshMcpServer instantiated (Cycle 16 + Cycle 17 sendPipeline)');
+  log('info', 'MeshMcpServer instantiated (Cycle 16 + Cycle 17 sendPipeline + Cycle 18 composePipeline)');
 
   if (!opts.skipMcpTokenFile) {
     try {
@@ -311,7 +323,7 @@ export async function bootstrapDaemon(
     });
   }
 
-  return { supervisor, ws, meshMcp, sendPipeline, getMcpPort, shutdown };
+  return { supervisor, ws, meshMcp, sendPipeline, composePipeline, getMcpPort, shutdown };
 }
 
 function wireParentPort(parent: ParentPortLike, supervisor: Supervisor, sendPipeline: SendPipeline): void {
