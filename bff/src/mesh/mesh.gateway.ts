@@ -139,6 +139,17 @@ export class MeshGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.broadcast("mesh.account.status", payload, owner);
   }
 
+  /**
+   * Emit a `tmux-input` event to the owner's connected daemon sockets.
+   * The daemon TmuxChild.input() handles it and applies the cc-modal hardwall.
+   */
+  emitTmuxInput(
+    owner: string,
+    payload: { deviceId: string; paneId: string; keys: string },
+  ): void {
+    this.broadcast("tmux-input", payload, owner);
+  }
+
   /** Test helper. */
   clientCount(owner?: string): number {
     if (owner) return this.clients.get(owner)?.size ?? 0;

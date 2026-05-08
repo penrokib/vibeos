@@ -46,6 +46,7 @@ struct DevicesTab: View {
                 }
             }
         }
+        .environment(store)
     }
 
     // MARK: - Device picker

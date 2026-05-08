@@ -87,6 +87,40 @@ final class DevicesStore {
         }
     }
 
+    // MARK: - Send keystrokes to a pane
+
+    /// POST /mesh/devices/:deviceId/panes/:paneId/keystroke
+    ///
+    /// Returns SendKeystrokesResult:
+    ///   - accepted:true  → daemon received the request
+    ///   - accepted:false → refusedReason explains why (cc-modal hardwall,
+    ///     BFF_UNREACHABLE, or tenant isolation)
+    ///
+    /// On 404/transport failure returns a synthetic BFF_UNREACHABLE result
+    /// so the UI always gets a typed response.
+    func sendKeystrokes(
+        deviceId: String,
+        paneId: String,
+        keys: String
+    ) async throws -> SendKeystrokesResult {
+        do {
+            return try await APIClient.shared.post(
+                "/mesh/devices/\(deviceId)/panes/\(paneId)/keystroke",
+                body: ["keys": keys],
+                as: SendKeystrokesResult.self
+            )
+        } catch let apiError as APIError {
+            switch apiError {
+            case .status(let code, _) where [404, 405, 501].contains(code):
+                return SendKeystrokesResult(accepted: false, refusedReason: "BFF_UNREACHABLE")
+            case .transport:
+                return SendKeystrokesResult(accepted: false, refusedReason: "BFF_UNREACHABLE")
+            default:
+                throw apiError
+            }
+        }
+    }
+
     // MARK: - Refresh panes for a single device
 
     func loadPanes(deviceId: String) async {

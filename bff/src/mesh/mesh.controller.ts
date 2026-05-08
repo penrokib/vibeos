@@ -22,8 +22,10 @@ import {
   InboxQueryDto,
   ProfileQueryDto,
 } from "./dto/inbox-query.dto";
+import { KeystrokeDto } from "./dto/keystroke.dto";
 import { MESH_PLATFORMS, type MeshPlatform } from "./dto/platform.dto";
 import { MeshGateway } from "./mesh.gateway";
+import { KeystrokeService } from "./keystroke.service";
 import { MeshService } from "./mesh.service";
 
 function assertPlatform(p: string): MeshPlatform {
@@ -45,6 +47,7 @@ export class MeshController {
   constructor(
     private readonly mesh: MeshService,
     private readonly gateway: MeshGateway,
+    private readonly keystroke: KeystrokeService,
   ) {}
 
   @Get("health")
@@ -88,6 +91,22 @@ export class MeshController {
     @Body() dto: RejectDraftDto,
   ) {
     return this.mesh.rejectDraft(id, dto, userId);
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // Keystroke send — iOS → BFF → daemon (via WS) → TmuxChild.input()
+  // cc-modal hardwall enforced server-side in the daemon (never bypassed).
+  // Tenant isolation: deviceId must belong to the JWT's ownerEmail.
+  // ─────────────────────────────────────────────────────────────────
+
+  @Post("devices/:deviceId/panes/:paneId/keystroke")
+  async keystrokeToPane(
+    @CurrentUser("email") email: string,
+    @Param("deviceId") deviceId: string,
+    @Param("paneId") paneId: string,
+    @Body() dto: KeystrokeDto,
+  ) {
+    return this.keystroke.sendKeystroke(email, deviceId, paneId, dto.keys);
   }
 
   // Per-platform endpoints — `:platform` last so the static routes above

@@ -6,9 +6,12 @@ struct TmuxPaneView: View {
     let pane: TmuxPane
     let device: MeshDevice?
 
+    @Environment(DevicesStore.self) private var store
+
     @State private var liveSnippet: String
     @State private var commandText: String = ""
     @State private var timer: Timer?
+    @State private var sendStatus: SendStatusBanner? = nil
 
     private var deviceLabel: String {
         device?.hostname ?? "Unknown device"
@@ -49,7 +52,20 @@ struct TmuxPaneView: View {
 
             Divider()
 
-            // MARK: Sticky send bar (Cycle 24 — disabled)
+            // MARK: Privacy banner
+            privacyBanner
+
+            // MARK: Shortcut row
+            shortcutRow
+
+            Divider()
+
+            // MARK: Send status inline (last send result)
+            if let status = sendStatus {
+                sendStatusRow(status)
+            }
+
+            // MARK: Sticky send bar
             sendBar
         }
         .navigationTitle(pane.title ?? paneLabel)
@@ -71,6 +87,84 @@ struct TmuxPaneView: View {
         .onDisappear { stopPolling() }
     }
 
+    // MARK: - Privacy banner
+
+    private var privacyBanner: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "lock.shield")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            Text("Sent via your daemon — anti-ban + cc-modal hardwall enforced server-side")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.secondarySystemBackground))
+    }
+
+    // MARK: - Shortcut row
+
+    private var shortcutRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                shortcutButton(label: "Esc",    keys: "\u{1B}")
+                shortcutButton(label: "↑",      keys: "\u{1B}[A")
+                shortcutButton(label: "↓",      keys: "\u{1B}[B")
+                shortcutButton(label: "Tab",    keys: "\t")
+                shortcutButton(label: "Ctrl+C", keys: "\u{03}")
+                shortcutButton(label: "Ctrl+D", keys: "\u{04}")
+                shortcutButton(label: "↵",      keys: "\n")
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 6)
+        }
+        .background(Color(.secondarySystemBackground))
+    }
+
+    private func shortcutButton(label: String, keys: String) -> some View {
+        Button {
+            Task { await performSend(keys: keys) }
+        } label: {
+            Text(label)
+                .font(.system(.caption, design: .monospaced))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 6))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .strokeBorder(Color(.separator), lineWidth: 0.5)
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Send status row
+
+    private func sendStatusRow(_ status: SendStatusBanner) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: status.accepted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                .font(.caption2)
+                .foregroundStyle(status.accepted ? .green : .orange)
+            Text(status.message)
+                .font(.caption2)
+                .foregroundStyle(status.accepted ? .green : .orange)
+                .lineLimit(2)
+            Spacer()
+            Text(status.timestamp, style: .time)
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 4)
+        .background(
+            (status.accepted ? Color.green : Color.orange).opacity(0.08)
+        )
+    }
+
     // MARK: - Send bar
 
     private var sendBar: some View {
@@ -85,20 +179,77 @@ struct TmuxPaneView: View {
                 .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
 
             Button {
-                // intentionally disabled — cycle 24 enables keystroke send
+                let text = commandText
+                commandText = ""
+                Task { await performSend(keys: text) }
             } label: {
                 Image(systemName: "paperplane.fill")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(.white)
                     .padding(10)
-                    .background(Color.accentColor.opacity(0.4), in: Circle())
+                    .background(
+                        commandText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                            ? Color.accentColor.opacity(0.3)
+                            : Color.accentColor,
+                        in: Circle()
+                    )
             }
-            .disabled(true)
-            .help("Keystroke send enabled in Cycle 24")
+            .disabled(commandText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .background(.ultraThinMaterial)
+    }
+
+    // MARK: - Send action
+
+    @MainActor
+    private func performSend(keys: String) async {
+        guard let deviceId = device?.id else {
+            sendStatus = SendStatusBanner(
+                accepted: false,
+                message: "Refused: no device selected",
+                timestamp: Date()
+            )
+            return
+        }
+
+        do {
+            let result = try await store.sendKeystrokes(
+                deviceId: deviceId,
+                paneId: pane.id,
+                keys: keys
+            )
+            if result.accepted {
+                sendStatus = SendStatusBanner(
+                    accepted: true,
+                    message: "Sent",
+                    timestamp: Date()
+                )
+            } else {
+                let reason = result.refusedReason ?? "unknown"
+                let humanReason: String
+                switch reason {
+                case "BFF_UNREACHABLE":
+                    humanReason = "Refused: daemon unreachable (BFF_UNREACHABLE)"
+                case "cc-modal hardwall":
+                    humanReason = "Refused: cc-modal hardwall (bare 2/3 + Enter blocked)"
+                default:
+                    humanReason = "Refused: \(reason)"
+                }
+                sendStatus = SendStatusBanner(
+                    accepted: false,
+                    message: humanReason,
+                    timestamp: Date()
+                )
+            }
+        } catch {
+            sendStatus = SendStatusBanner(
+                accepted: false,
+                message: "Error: \(error.localizedDescription)",
+                timestamp: Date()
+            )
+        }
     }
 
     // MARK: - 5-second poll
@@ -133,4 +284,12 @@ struct TmuxPaneView: View {
             // silently ignore on poll failure — keep last known value
         }
     }
+}
+
+// MARK: - SendStatusBanner
+
+private struct SendStatusBanner {
+    let accepted: Bool
+    let message: String
+    let timestamp: Date
 }

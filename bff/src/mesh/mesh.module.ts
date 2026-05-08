@@ -4,6 +4,7 @@ import { JwtModule } from "@nestjs/jwt";
 import { AuditModule } from "../audit/audit.module";
 import { MeshController } from "./mesh.controller";
 import { MeshGateway } from "./mesh.gateway";
+import { KeystrokeService } from "./keystroke.service";
 import { MeshService } from "./mesh.service";
 
 /**
@@ -27,7 +28,7 @@ import { MeshService } from "./mesh.service";
     }),
   ],
   controllers: [MeshController],
-  providers: [MeshService, MeshGateway],
-  exports: [MeshService, MeshGateway],
+  providers: [MeshService, MeshGateway, KeystrokeService],
+  exports: [MeshService, MeshGateway, KeystrokeService],
 })
 export class MeshModule {}

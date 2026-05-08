@@ -22,6 +22,15 @@ struct TmuxPane: Codable, Identifiable, Hashable {
     let updatedAt: Date
 }
 
+// MARK: - SendKeystrokesResult
+
+/// Mirrors the BFF KeystrokeResponseDto returned by
+/// POST /mesh/devices/:deviceId/panes/:paneId/keystroke
+struct SendKeystrokesResult: Codable {
+    let accepted: Bool
+    let refusedReason: String?
+}
+
 // MARK: - Mock data
 
 extension MeshDevice {
