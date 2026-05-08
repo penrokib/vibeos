@@ -274,7 +274,7 @@ describe('MeshMcpServer — mesh.send_draft anti-ban hardwall', () => {
       '/status': { status: 200, body: { status: 'open', name: 'personal' } },
     });
 
-    const { server, supervisor } = await buildServer({ antiBanClient: refuseClient });
+    const { supervisor } = await buildServer({ antiBanClient: refuseClient });
     const pipeline = new SendPipeline({
       supervisor,
       antiBanClient: refuseClient,
