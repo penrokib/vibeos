@@ -37,6 +37,7 @@ import type { SupervisorStatus, ChildState } from './types';
 import { WaChild } from './children/wa/wa-child';
 import { TmuxChild } from './children/tmux/tmux-child';
 import { VoiceChild } from './children/voice/voice-child';
+import { EmailChild } from './children/email/email-child';
 import { MeshMcpServer } from './mcp/mesh-mcp-server';
 import { SearchService } from './search/search.service';
 import { DigestGenerator } from './digest/digest-generator';
@@ -202,6 +203,28 @@ export async function bootstrapDaemon(
       },
     );
     log('info', 'tmux child registered (MESH_TMUX_ENABLED default=on)');
+  }
+
+  // ---- Cycle 15: EmailChild registration (MESH_EMAIL_ENABLED=true, default OFF) -
+  // Default OFF — Roki opts in by setting MESH_EMAIL_ENABLED=true + providing creds
+  // via the Connections tab wizard (Gmail OAuth or manual IMAP/SMTP).
+  // Account name defaults to 'default'; override with MESH_EMAIL_ACCOUNT.
+  // Tenant ID defaults to 'default'; override with MESH_EMAIL_TENANT.
+  if (process.env['MESH_EMAIL_ENABLED'] === 'true') {
+    const emailAccount = process.env['MESH_EMAIL_ACCOUNT'] ?? 'default';
+    const emailTenantId = process.env['MESH_EMAIL_TENANT'] ?? 'default';
+    supervisor.register(
+      { id: `email-${emailAccount}`, platform: 'email' },
+      async (ctx) =>
+        new EmailChild(ctx, {
+          account: emailAccount,
+          tenantId: emailTenantId,
+          // Secrets read/write wired via M12 SecretsService at runtime.
+          // No-op fallbacks here — real pairing happens through pair() called
+          // from EMAIL_PAIR_OAUTH / EMAIL_PAIR_IMAP IPC handlers.
+        }),
+    );
+    log('info', `email child registered (account=${emailAccount}, MESH_EMAIL_ENABLED=true)`);
   }
 
   // ---- M11: VoiceChild registration (always registered; degrades gracefully) --

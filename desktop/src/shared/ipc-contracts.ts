@@ -430,6 +430,67 @@ export const DIGEST_GENERATE = 'rb.digest.generate' as const;
 export const DIGEST_LATEST = 'rb.digest.latest' as const;
 
 // -----------------------------------------------------------------------------
+// Cycle 15 — Email (IMAP/SMTP) pair-flow IPC contracts
+//
+// EMAIL_PAIR_START  : renderer → main: begin pair wizard for an email account
+// EMAIL_PAIR_OAUTH  : renderer → main: Gmail OAuth flow — exchange refresh token
+// EMAIL_PAIR_IMAP   : renderer → main: manual IMAP/SMTP credentials form
+//
+// Credentials NEVER stored in renderer state — only transit IPC + stored in M12
+// Keychain via main process. Renderer receives success/error only.
+// -----------------------------------------------------------------------------
+
+/** Step 1: start the email pair wizard for a given account. */
+export interface EmailPairStartInput {
+  /** Logical account label, e.g. 'gmail-rokib' or 'work-outlook'. */
+  account: string;
+}
+
+export interface EmailPairStartResult {
+  success: boolean;
+  error?: string;
+}
+
+/**
+ * Step 2a: Gmail OAuth2 — renderer receives the refresh token from the OAuth
+ * callback (opened in system browser) and hands it to main for storage + IMAP test.
+ */
+export interface EmailPairOAuthInput {
+  account: string;
+  /** Gmail refresh token returned by OAuth2 callback. */
+  refreshToken: string;
+  /** Access token to bootstrap the first IMAP connection. */
+  accessToken: string;
+  /** Google account email address (becomes the IMAP/SMTP user). */
+  email: string;
+}
+
+export interface EmailPairOAuthResult {
+  success: boolean;
+  error?: string;
+}
+
+/**
+ * Step 2b: Manual IMAP/SMTP credentials (non-Gmail providers).
+ * Credentials are JSON-serialised, stored in M12 Keychain, never logged.
+ */
+export interface EmailPairImapInput {
+  account: string;
+  imapHost: string;
+  imapPort: number;
+  smtpHost: string;
+  smtpPort: number;
+  user: string;
+  /** Plain-text password — only transits IPC; never written to disk. */
+  pass: string;
+}
+
+export interface EmailPairImapResult {
+  success: boolean;
+  error?: string;
+}
+
+// -----------------------------------------------------------------------------
 // Cycle 17 — Drafts send pipeline IPC contracts
 // DRAFTS_APPROVE: renderer → main → SendPipeline.sendDraft → returns SendResult
 // DRAFTS_REJECT:  renderer → main → BFF /agency/drafts/:id/reject
@@ -698,6 +759,12 @@ export const IPC = {
   VOICE_PUSH_TO_BFF: 'rb.voice.pushToBff',
   /** M11: Voice quickbar — toggle quickbar visibility. renderer → main (invoke). */
   QUICKBAR_TOGGLE: 'rb.quickbar.toggle',
+  /** Cycle 15: start email pair wizard. renderer → main. */
+  EMAIL_PAIR_START: 'rb.email.pairStart',
+  /** Cycle 15: Gmail OAuth token exchange. renderer → main. */
+  EMAIL_PAIR_OAUTH: 'rb.email.pairOAuth',
+  /** Cycle 15: manual IMAP/SMTP credentials form. renderer → main. */
+  EMAIL_PAIR_IMAP: 'rb.email.pairImap',
   /** Cycle 18: Compose-from-phone — refine text via persona CC → post draft. renderer → main. */
   COMPOSE_DRAFT: 'rb.compose.draft',
 } as const;
