@@ -25,6 +25,10 @@
 		AA0010120000000000000001 /* InboxThread.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010120000000000000001 /* InboxThread.swift */; };
 		AA0010130000000000000001 /* InboxStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010130000000000000001 /* InboxStore.swift */; };
 		AA0010140000000000000001 /* InboxTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010140000000000000001 /* InboxTab.swift */; };
+		AA0010160000000000000001 /* DraftEnhanced.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010160000000000000001 /* DraftEnhanced.swift */; };
+		AA0010170000000000000001 /* DraftsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010170000000000000001 /* DraftsStore.swift */; };
+		AA0010180000000000000001 /* DraftsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010180000000000000001 /* DraftsTab.swift */; };
+		AA0010190000000000000001 /* DraftDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010190000000000000001 /* DraftDetailView.swift */; };
 		AA00100D0000000000000001 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AB00100D0000000000000001 /* Preview Assets.xcassets */; };
 /* End PBXBuildFile section */
 
@@ -50,6 +54,10 @@
 		AB0010120000000000000001 /* InboxThread.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxThread.swift; sourceTree = "<group>"; };
 		AB0010130000000000000001 /* InboxStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxStore.swift; sourceTree = "<group>"; };
 		AB0010140000000000000001 /* InboxTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxTab.swift; sourceTree = "<group>"; };
+		AB0010160000000000000001 /* DraftEnhanced.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftEnhanced.swift; sourceTree = "<group>"; };
+		AB0010170000000000000001 /* DraftsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftsStore.swift; sourceTree = "<group>"; };
+		AB0010180000000000000001 /* DraftsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftsTab.swift; sourceTree = "<group>"; };
+		AB0010190000000000000001 /* DraftDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftDetailView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -99,6 +107,7 @@
 				AB0010020000000000000001 /* Models.swift */,
 				AB00100F0000000000000001 /* Digest.swift */,
 				AB0010120000000000000001 /* InboxThread.swift */,
+				AB0010160000000000000001 /* DraftEnhanced.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -111,6 +120,7 @@
 				AB0010050000000000000001 /* Keychain.swift */,
 				AB0010100000000000000001 /* DigestStore.swift */,
 				AB0010130000000000000001 /* InboxStore.swift */,
+				AB0010170000000000000001 /* DraftsStore.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -126,6 +136,8 @@
 				AB00100B0000000000000001 /* SettingsView.swift */,
 				AB0010110000000000000001 /* TodayView.swift */,
 				AB0010140000000000000001 /* InboxTab.swift */,
+				AB0010180000000000000001 /* DraftsTab.swift */,
+				AB0010190000000000000001 /* DraftDetailView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -225,6 +237,10 @@
 				AA0010120000000000000001 /* InboxThread.swift in Sources */,
 				AA0010130000000000000001 /* InboxStore.swift in Sources */,
 				AA0010140000000000000001 /* InboxTab.swift in Sources */,
+				AA0010160000000000000001 /* DraftEnhanced.swift in Sources */,
+				AA0010170000000000000001 /* DraftsStore.swift in Sources */,
+				AA0010180000000000000001 /* DraftsTab.swift in Sources */,
+				AA0010190000000000000001 /* DraftDetailView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
