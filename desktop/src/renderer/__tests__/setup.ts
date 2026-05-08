@@ -49,6 +49,13 @@ afterAll(() => server.close());
     toggle: async () => ({ listening: false }),
     onToggle: () => () => {},
   },
+  cockpit: {
+    listPanes: async () => ({ panes: [] }),
+    openPane: async () => ({ success: true }),
+    input: async () => {},
+    closePane: async () => {},
+    onOutput: () => () => {},
+  },
   app: {
     quit: () => {},
     version: '0.1.0-test',

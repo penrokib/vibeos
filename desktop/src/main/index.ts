@@ -35,6 +35,11 @@ import {
   type AuthEnrollPayload,
   type AuthStatusPayload,
   type CaptureScreenshotPayload,
+  type CockpitInputRequest,
+  type CockpitListPanesResponse,
+  type CockpitOpenPaneRequest,
+  type CockpitOpenPaneResponse,
+  type CockpitOutputPayload,
   type DaemonChildRestartRequest,
   type DaemonEmergencyStopPayload,
   type DaemonStatusPayload,
@@ -478,6 +483,40 @@ function registerIpcHandlers(): void {
   ipcMain.handle(IPC.BUGS_LIST, async (_evt, input: ListBugsInput): Promise<ListBugsResult> => {
     return listBugs(input);
   });
+
+  // M06a: Cockpit — echo placeholder (cycle 9 wires real PTY / bridge-mac).
+  ipcMain.handle(
+    IPC.COCKPIT_OPEN_PANE,
+    (_evt, _req: CockpitOpenPaneRequest): CockpitOpenPaneResponse => {
+      console.log('[cockpit] openPane stub — real PTY wired in cycle 9');
+      return { success: true };
+    },
+  );
+
+  ipcMain.handle(
+    IPC.COCKPIT_INPUT,
+    (_evt, req: CockpitInputRequest): void => {
+      // Echo the input back to ALL windows as COCKPIT_OUTPUT (no PTY in v1).
+      const echo: CockpitOutputPayload = {
+        paneId: req.paneId,
+        data: req.data + ' (echo from main, no PTY yet)\r\n',
+      };
+      broadcast(IPC.COCKPIT_OUTPUT, echo);
+    },
+  );
+
+  ipcMain.handle(IPC.COCKPIT_CLOSE_PANE, (_evt, _req): void => {
+    console.log('[cockpit] closePane stub — no-op in v1');
+  });
+
+  ipcMain.handle(IPC.COCKPIT_LIST_PANES, (): CockpitListPanesResponse => ({
+    panes: [
+      {
+        id: 'echo',
+        label: 'Echo (placeholder — bridge-mac coming in cycle 9)',
+      },
+    ],
+  }));
 
   // Mesh — read-only over the local multi-account WhatsApp backend.
   // Sending stays drafts-only; no MESH_SEND channel exposed.
