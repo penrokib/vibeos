@@ -104,6 +104,50 @@ export interface ListBugsResult {
   total: number;
 }
 
+// -----------------------------------------------------------------------------
+// M02 — daemon supervisor extensions. Renderer never speaks to the daemon
+// directly via IPC; ws://127.0.0.1:<port> is the realtime path. Main is the
+// typed-IPC bridge — these payloads cross main ↔ renderer.
+// -----------------------------------------------------------------------------
+
+export type ChildLifecycleState =
+  | 'idle'
+  | 'starting'
+  | 'running'
+  | 'crashing'
+  | 'restarting'
+  | 'stopping'
+  | 'stopped'
+  | 'paused'
+  | 'permanently-failed';
+
+export interface ChildStatusSummary {
+  id: string;
+  platform: string;
+  state: ChildLifecycleState;
+  restartCount: number;
+  recentCrashCount: number;
+  changedAt: string;
+  lastError?: string;
+  nextRestartAt?: string;
+}
+
+export interface SupervisorStatusPayload {
+  wsPort: number;
+  uptime: number;
+  emergencyStopped: boolean;
+  children: ChildStatusSummary[];
+}
+
+export interface DaemonChildRestartRequest {
+  childId: string;
+}
+
+export interface DaemonEmergencyStopPayload {
+  /** Set true → request resume (paired channel re-use to keep IPC surface small). */
+  resume?: boolean;
+}
+
 /** Tab IDs for the cockpit shell — placeholders rendered in M01, hydrated in M06–M12. */
 export type TabId =
   | 'cockpit'
@@ -309,6 +353,14 @@ export const IPC = {
   VOICE_TOGGLE: 'rb.voice.toggle',
   /** Quit the app cleanly (Tray menu / cmd-Q). renderer → main. */
   APP_QUIT: 'rb.app.quit',
+  /** Full supervisor snapshot. invoke from renderer; main forwards from daemon. */
+  DAEMON_SUPERVISOR_STATUS: 'rb.daemon.supervisorStatus',
+  /** Request restart (or unlock-then-restart) of a single child. invoke. */
+  DAEMON_CHILD_RESTART: 'rb.daemon.childRestart',
+  /** Emergency-stop all children (or resume). invoke. */
+  DAEMON_EMERGENCY_STOP: 'rb.daemon.emergencyStop',
+  /** Push: supervisor status changed (delta or full). main → renderer. */
+  DAEMON_SUPERVISOR_BROADCAST: 'rb.daemon.supervisorBroadcast',
   /** M09: List open PRs across both repos. renderer → main. */
   PRS_LIST: 'rb.prs.list',
   /** M09: Merge a PR (gated by qa-approved + CI). renderer → main. */
@@ -358,6 +410,14 @@ export interface RokibrainBridgeApi {
     onStatus: (handler: (payload: DaemonStatusPayload) => void) => () => void;
     /** One-shot fetch of the current ws port. */
     getWsPort: () => Promise<DaemonWsPortPayload>;
+    /** Full supervisor snapshot — children + uptime. */
+    getSupervisorStatus: () => Promise<SupervisorStatusPayload>;
+    /** Subscribe to supervisor status pushes. */
+    onSupervisorStatus: (handler: (payload: SupervisorStatusPayload) => void) => () => void;
+    /** Restart (or unlock-then-restart) a child by id. */
+    restartChild: (req: DaemonChildRestartRequest) => Promise<void>;
+    /** Emergency-stop all children (or resume). */
+    emergencyStop: (payload?: DaemonEmergencyStopPayload) => Promise<void>;
   };
   tabs: {
     /** Programmatic tab switch (renderer-initiated). */

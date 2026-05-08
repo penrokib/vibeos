@@ -1,15 +1,31 @@
 // =============================================================================
-// rokibrain.app — main process (M01)
+// rokibrain.app — main process (M01 + M02)
 // -----------------------------------------------------------------------------
-// Owns: window lifecycle, tray, global hotkeys, IPC routing, autoupdater stub.
-// M01 ships only the skeleton. M02 adds the daemon utilityProcess; M12 adds
-// secrets via safeStorage. Wave-3 agents extend this file but MUST keep:
-//   - nodeIntegration: false
-//   - contextIsolation: true
-//   - sandbox: true
+// Owns: window lifecycle, tray, global hotkeys, IPC routing, autoupdater stub,
+// **daemon utilityProcess lifecycle** (M02 added).
+//
+// M02 changes:
+//   - Spawns the daemon as an Electron `utilityProcess` (NOT child_process.fork)
+//     on `app.whenReady`; tears it down on `before-quit`.
+//   - Bridges renderer IPC ↔ daemon parentPort messages.
+//
+// Hardwalls preserved:
+//   - nodeIntegration: false, contextIsolation: true, sandbox: true.
+//   - Renderer never imports node fs/child_process.
+//   - Daemon work runs in a separate process — Electron main never blocks on it.
 // =============================================================================
 
-import { app, BrowserWindow, globalShortcut, ipcMain, Menu, nativeImage, Tray } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  globalShortcut,
+  ipcMain,
+  Menu,
+  nativeImage,
+  Tray,
+  utilityProcess,
+  type UtilityProcess,
+} from 'electron';
 import { autoUpdater } from 'electron-updater';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -19,6 +35,8 @@ import {
   type AuthEnrollPayload,
   type AuthStatusPayload,
   type CaptureScreenshotPayload,
+  type DaemonChildRestartRequest,
+  type DaemonEmergencyStopPayload,
   type DaemonStatusPayload,
   type DaemonWsPortPayload,
   type ListBugsInput,
@@ -34,9 +52,9 @@ import {
   type MeshMessagesRequest,
   type PauseTogglePayload,
   type PrItem,
+  type PrsListPayload,
   type PrsMergeRequest,
   type PrsMergeResponse,
-  type PrsListPayload,
   type PrsOpenShellRequest,
   type SecretKey,
   type SecretsGetPayload,
@@ -44,11 +62,15 @@ import {
   type SecretsSetPayload,
   type SubmitBugInput,
   type SubmitBugResult,
+  type SupervisorStatusPayload,
   type TabId,
   type TabSwitchPayload,
   type VoiceTogglePayload,
 } from '../shared/ipc-contracts';
-import * as gh from './gh';
+import type {
+  SupervisorInboundMessage,
+  SupervisorOutboundMessage,
+} from '../daemon';
 import {
   getAuthStatus,
   handleEnrollDeepLink,
@@ -57,8 +79,9 @@ import {
   setAuthBroadcast,
   startEnrollment,
 } from './auth';
-import { deleteSecret, getSecret, listSecrets, setSecret } from './secrets';
+import * as gh from './gh';
 import { captureScreenshot } from './screenshot';
+import { deleteSecret, getSecret, listSecrets, setSecret } from './secrets';
 
 // ---- module state ----------------------------------------------------------
 
@@ -66,11 +89,23 @@ let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let paused = false;
 let voiceListening = false;
+let daemonProcess: UtilityProcess | null = null;
+let daemonReady = false;
 let daemonStatus: DaemonStatusPayload = {
   status: 'stopped',
   changedAt: new Date().toISOString(),
-  reason: 'M02 not yet wired',
+  reason: 'awaiting daemon utilityProcess fork',
 };
+let supervisorStatus: SupervisorStatusPayload = {
+  wsPort: 0,
+  uptime: 0,
+  emergencyStopped: false,
+  children: [],
+};
+
+// pending request bookkeeping for daemon-IPC round-trips
+let pendingStatusResolvers: Array<(s: SupervisorStatusPayload) => void> = [];
+let pendingWsPortResolvers: Array<(p: DaemonWsPortPayload) => void> = [];
 
 // ---- autoupdater stub (M13 wires real signing) -----------------------------
 
@@ -83,7 +118,6 @@ function configureAutoUpdater(): void {
   autoUpdater.on('error', (err) => {
     console.warn('[autoupdater] error (expected in dev):', err.message);
   });
-  // Don't actually check for updates in dev — M13 turns this on for prod builds.
 }
 
 // ---- window ----------------------------------------------------------------
@@ -133,14 +167,13 @@ function showOrCreateWindow(): void {
 // ---- tray ------------------------------------------------------------------
 
 function createTray(): void {
-  // 16x16 1-bit "green dot" PNG, base64. Replace with proper template image in M13.
   const greenDot =
     'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAOklEQVR4nGNgGAVUBowMDAz/' +
     'GfBoYsKnEZsmJgYsGpgYGBgYGRkZGfBpYsCnCRcgRhMTLk2EAAB7yQQBnjXJpAAAAABJRU5E' +
     'rkJggg==';
   const icon = nativeImage.createFromBuffer(Buffer.from(greenDot, 'base64'));
   if (!icon.isEmpty() && process.platform === 'darwin') {
-    icon.setTemplateImage(false); // keep colour for now (green = healthy)
+    icon.setTemplateImage(false);
   }
 
   tray = new Tray(icon);
@@ -229,6 +262,12 @@ function togglePause(): PauseTogglePayload {
   paused = !paused;
   const payload: PauseTogglePayload = { paused };
   broadcast(IPC.PAUSE_TOGGLE, payload);
+  // ⌘⇧P → emergency stop / resume.
+  if (paused) {
+    sendDaemon({ kind: 'emergencyStop' });
+  } else {
+    sendDaemon({ kind: 'resume' });
+  }
   return payload;
 }
 
@@ -251,7 +290,61 @@ async function loadPrSequence(): Promise<number[]> {
 }
 
 function registerIpcHandlers(): void {
-  ipcMain.handle(IPC.DAEMON_WS_PORT, (): DaemonWsPortPayload => ({ port: 0 }));
+  ipcMain.handle(IPC.DAEMON_WS_PORT, async (): Promise<DaemonWsPortPayload> => {
+    if (!daemonProcess || !daemonReady) return { port: 0 };
+    return new Promise<DaemonWsPortPayload>((resolve) => {
+      pendingWsPortResolvers.push(resolve);
+      sendDaemon({ kind: 'getWsPort' });
+      // safety timeout — never let renderer hang
+      setTimeout(() => {
+        const idx = pendingWsPortResolvers.indexOf(resolve);
+        if (idx >= 0) {
+          pendingWsPortResolvers.splice(idx, 1);
+          resolve({ port: 0 });
+        }
+      }, 2_000);
+    });
+  });
+
+  ipcMain.handle(IPC.DAEMON_SUPERVISOR_STATUS, async (): Promise<SupervisorStatusPayload> => {
+    if (!daemonProcess || !daemonReady) return supervisorStatus;
+    return new Promise<SupervisorStatusPayload>((resolve) => {
+      pendingStatusResolvers.push(resolve);
+      sendDaemon({ kind: 'getStatus' });
+      setTimeout(() => {
+        const idx = pendingStatusResolvers.indexOf(resolve);
+        if (idx >= 0) {
+          pendingStatusResolvers.splice(idx, 1);
+          resolve(supervisorStatus);
+        }
+      }, 2_000);
+    });
+  });
+
+  ipcMain.handle(
+    IPC.DAEMON_CHILD_RESTART,
+    async (_evt, req: DaemonChildRestartRequest) => {
+      if (!req?.childId) throw new Error('childId required');
+      sendDaemon({ kind: 'unlock', childId: req.childId });
+    },
+  );
+
+  ipcMain.handle(
+    IPC.DAEMON_EMERGENCY_STOP,
+    async (_evt, payload?: DaemonEmergencyStopPayload) => {
+      if (payload?.resume) {
+        sendDaemon({ kind: 'resume' });
+        if (paused) togglePause(); // realign pause flag w/ supervisor
+      } else {
+        sendDaemon({ kind: 'emergencyStop' });
+        if (!paused) {
+          paused = true;
+          broadcast(IPC.PAUSE_TOGGLE, { paused } satisfies PauseTogglePayload);
+        }
+      }
+    },
+  );
+
   ipcMain.handle(IPC.TABS_SWITCH, (_evt, tab: TabId) => {
     if (!TAB_IDS.includes(tab)) throw new Error(`unknown tab: ${tab}`);
     switchTab(tab, false);
@@ -465,10 +558,122 @@ function normalizeStatus(raw: string): MeshAccountStatus {
   }
 }
 
+// ---- daemon utilityProcess --------------------------------------------------
+
+function sendDaemon(msg: SupervisorInboundMessage): void {
+  if (!daemonProcess) return;
+  daemonProcess.postMessage(msg);
+}
+
+function spawnDaemon(): void {
+  if (daemonProcess) return;
+  // Co-located with index.js after build (electron-vite multi-entry main).
+  const entry = join(__dirname, 'daemon.js');
+  const proc = utilityProcess.fork(entry, [], {
+    serviceName: 'rokibrain-daemon',
+    stdio: 'pipe',
+    env: {
+      ...process.env,
+      NODE_ENV: process.env['NODE_ENV'] ?? 'production',
+    },
+  });
+
+  daemonProcess = proc;
+  daemonReady = false;
+
+  proc.stdout?.on('data', (d) => {
+    process.stdout.write(`[daemon] ${d}`);
+  });
+  proc.stderr?.on('data', (d) => {
+    process.stderr.write(`[daemon!] ${d}`);
+  });
+
+  proc.on('message', (m: SupervisorOutboundMessage) => handleDaemonMessage(m));
+  proc.on('exit', (code) => {
+    daemonProcess = null;
+    daemonReady = false;
+    daemonStatus = {
+      status: 'crashed',
+      changedAt: new Date().toISOString(),
+      reason: `daemon exited with code=${code}`,
+    };
+    broadcast(IPC.DAEMON_STATUS, daemonStatus);
+    // Restart with a small delay if app is still running and not quitting.
+    if (!app.isReady() || isQuitting) return;
+    setTimeout(() => spawnDaemon(), 2_000);
+  });
+}
+
+let isQuitting = false;
+
+function handleDaemonMessage(m: SupervisorOutboundMessage): void {
+  switch (m.kind) {
+    case 'ready':
+      daemonReady = true;
+      supervisorStatus = m.status;
+      daemonStatus = {
+        status: 'ready',
+        changedAt: new Date().toISOString(),
+      };
+      broadcast(IPC.DAEMON_STATUS, daemonStatus);
+      broadcast(IPC.DAEMON_SUPERVISOR_BROADCAST, m.status);
+      // Auto-start registered children (none in M02; M04+ register theirs).
+      sendDaemon({ kind: 'startAll' });
+      break;
+    case 'status':
+      supervisorStatus = m.status;
+      broadcast(IPC.DAEMON_SUPERVISOR_BROADCAST, m.status);
+      while (pendingStatusResolvers.length > 0) {
+        const r = pendingStatusResolvers.shift();
+        r?.(m.status);
+      }
+      break;
+    case 'wsPort':
+      while (pendingWsPortResolvers.length > 0) {
+        const r = pendingWsPortResolvers.shift();
+        r?.({ port: m.port });
+      }
+      break;
+    case 'error':
+      daemonStatus = {
+        status: 'degraded',
+        changedAt: new Date().toISOString(),
+        reason: m.message,
+      };
+      broadcast(IPC.DAEMON_STATUS, daemonStatus);
+      break;
+    case 'childStateChange':
+      // No-op at the main level; renderer subscribes to supervisorBroadcast.
+      break;
+    default: {
+      const _exhaustive: never = m;
+      void _exhaustive;
+    }
+  }
+}
+
+async function shutdownDaemon(): Promise<void> {
+  if (!daemonProcess) return;
+  isQuitting = true;
+  sendDaemon({ kind: 'stopAll', graceful: true });
+  // Give the daemon ≤3s to exit cleanly before we let app.quit kill it.
+  await new Promise<void>((resolve) => {
+    let resolved = false;
+    const finish = (): void => {
+      if (resolved) return;
+      resolved = true;
+      resolve();
+    };
+    daemonProcess?.once('exit', finish);
+    setTimeout(finish, 3_000);
+  });
+  daemonProcess?.kill();
+  daemonProcess = null;
+}
+
 // ---- global hotkeys --------------------------------------------------------
 
 function registerHotkeys(): void {
-  // ⌘1..⌘9 → tabs[0..8], ⌘0 → tabs[9]. Tab #11 (settings) accessible via UI only.
   const numberKeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'] as const;
   numberKeys.forEach((key, idx) => {
     const accel = process.platform === 'darwin' ? `Cmd+${key}` : `Ctrl+${key}`;
@@ -487,7 +692,7 @@ function registerHotkeys(): void {
   globalShortcut.register(pauseAccel, () => togglePause());
 }
 
-// ---- daemon status broadcast (stub — M02 owns real impl) -------------------
+// ---- daemon status broadcast (legacy daemon:status — supervised by M02) ----
 
 function broadcastDaemonStatus(): void {
   broadcast(IPC.DAEMON_STATUS, daemonStatus);
@@ -519,15 +724,18 @@ app.whenReady().then(() => {
   mainWindow = createMainWindow();
   createTray();
   registerHotkeys();
+  spawnDaemon();
 
-  // Push initial daemon status once renderer is up.
   mainWindow.webContents.once('did-finish-load', () => {
     daemonStatus = {
-      status: 'stopped',
+      status: daemonReady ? 'ready' : 'starting',
       changedAt: new Date().toISOString(),
-      reason: 'awaiting M02 daemon supervisor',
+      reason: daemonReady ? undefined : 'daemon utilityProcess starting',
     };
     broadcastDaemonStatus();
+    if (daemonReady) {
+      broadcast(IPC.DAEMON_SUPERVISOR_BROADCAST, supervisorStatus);
+    }
   });
 
   app.on('activate', () => {
@@ -566,8 +774,15 @@ if (!gotTheLock) {
   });
 }
 
+app.on('before-quit', async (e) => {
+  if (!daemonProcess || isQuitting) return;
+  e.preventDefault();
+  await shutdownDaemon();
+  app.quit();
+});
+
+
 app.on('window-all-closed', () => {
-  // Tray keeps the app alive on macOS; on Linux/Windows we follow conventional behaviour.
   if (process.platform !== 'darwin') app.quit();
 });
 

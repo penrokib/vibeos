@@ -1,0 +1,261 @@
+// =============================================================================
+// rokibrain.app — daemon entry (M02)
+// -----------------------------------------------------------------------------
+// Runs in an Electron utilityProcess (NOT child_process.fork) — see
+// design §1 + locked-decisions §1. utilityProcess gives us proper structured-
+// clone IPC + sandbox-capable execution + clean shutdown semantics.
+//
+// This file is the entry POINT loaded by `utilityProcess.fork(__dirname/index.js)`
+// from src/main/index.ts. It never imports Electron itself; the only IPC out is
+// `process.parentPort` (utilityProcess API) — provided by the runtime.
+//
+// Lifecycle:
+//   1. main forks this file with `serviceName='rokibrain-daemon'`.
+//   2. We boot Supervisor + DaemonWsServer + (HTTP BFF counter client when env
+//      provides token+url; otherwise tests inject a mock).
+//   3. We post `{ kind: 'ready', wsPort, status }` to parentPort.
+//   4. Main bridges renderer IPC ↔ parentPort messages.
+//
+// Shape of supervisor → main message: SupervisorOutboundMessage.
+// Shape of main → supervisor message: SupervisorInboundMessage.
+// =============================================================================
+
+import { mkdir, writeFile } from 'node:fs/promises';
+import { homedir, platform as osPlatform } from 'node:os';
+import { join } from 'node:path';
+import {
+  HttpBffCounterClient,
+  setBffCounterClient,
+  type BffCounterClient,
+} from './anti-ban';
+import { Supervisor } from './supervisor';
+import { EnvJwtAuth, DaemonWsServer } from './ws-server';
+import type { SupervisorStatus, ChildState } from './types';
+
+// -----------------------------------------------------------------------------
+// IPC envelope between main and daemon utilityProcess.
+// -----------------------------------------------------------------------------
+
+export type SupervisorInboundMessage =
+  | { kind: 'startAll' }
+  | { kind: 'stopAll'; graceful?: boolean }
+  | { kind: 'emergencyStop' }
+  | { kind: 'resume' }
+  | { kind: 'unlock'; childId: string }
+  | { kind: 'getStatus' }
+  | { kind: 'getWsPort' };
+
+export type SupervisorOutboundMessage =
+  | { kind: 'ready'; wsPort: number; status: SupervisorStatus }
+  | { kind: 'status'; status: SupervisorStatus }
+  | { kind: 'wsPort'; port: number }
+  | { kind: 'error'; message: string }
+  | {
+      kind: 'childStateChange';
+      childId: string;
+      state: ChildState;
+      message?: string;
+    };
+
+// -----------------------------------------------------------------------------
+// Runtime parentPort handle — utilityProcess provides this. We import lazily
+// so unit tests that import this module don't crash on `process.parentPort`.
+// -----------------------------------------------------------------------------
+
+interface ParentPortLike {
+  postMessage: (m: SupervisorOutboundMessage) => void;
+  on: (
+    evt: 'message',
+    cb: (m: { data: SupervisorInboundMessage }) => void,
+  ) => void;
+}
+
+function getParentPort(): ParentPortLike | null {
+  // process.parentPort is only present in utilityProcess context.
+  const pp = (process as unknown as { parentPort?: ParentPortLike }).parentPort;
+  return pp ?? null;
+}
+
+// -----------------------------------------------------------------------------
+// Userdata path for the port-discovery file (M01 hand-off).
+// -----------------------------------------------------------------------------
+
+function userDataDir(): string {
+  switch (osPlatform()) {
+    case 'darwin':
+      return join(homedir(), 'Library', 'Application Support', 'rokibrain.app');
+    case 'win32':
+      return join(
+        process.env['APPDATA'] ?? join(homedir(), 'AppData', 'Roaming'),
+        'rokibrain.app',
+      );
+    default:
+      return join(homedir(), '.config', 'rokibrain.app');
+  }
+}
+
+async function writePortFile(port: number): Promise<void> {
+  const dir = userDataDir();
+  await mkdir(dir, { recursive: true });
+  await writeFile(join(dir, 'daemon.port'), String(port), { mode: 0o600 });
+}
+
+// -----------------------------------------------------------------------------
+// Daemon bootstrap.
+// -----------------------------------------------------------------------------
+
+export interface DaemonBootstrapOptions {
+  parentPort?: ParentPortLike;
+  /** Override BFF client — used by tests + when env is unconfigured. */
+  bffClient?: BffCounterClient;
+  /** Override WS port (0 = ephemeral). */
+  wsPort?: number;
+  /** Disable port-file write (tests). */
+  skipPortFile?: boolean;
+}
+
+export interface DaemonBootstrapResult {
+  supervisor: Supervisor;
+  ws: DaemonWsServer;
+  shutdown: () => Promise<void>;
+}
+
+export async function bootstrapDaemon(
+  opts: DaemonBootstrapOptions = {},
+): Promise<DaemonBootstrapResult> {
+  const supervisor = new Supervisor();
+
+  const ws = new DaemonWsServer({
+    auth: new EnvJwtAuth(),
+    port: opts.wsPort ?? 0,
+    logger: {
+      info: (m, d) => log('info', m, d),
+      warn: (m, d) => log('warn', m, d),
+    },
+  });
+  await ws.listen();
+  supervisor.setWsPort(ws.port);
+
+  if (!opts.skipPortFile) {
+    try {
+      await writePortFile(ws.port);
+    } catch (err) {
+      log('warn', 'failed to write port file', { err: String(err) });
+    }
+  }
+
+  // Anti-ban client wiring. Prefer injected (tests); else build from env.
+  if (opts.bffClient) {
+    setBffCounterClient(opts.bffClient);
+  } else if (process.env['ROKIBRAIN_BFF_URL'] && process.env['ROKIBRAIN_DEV_JWT']) {
+    setBffCounterClient(
+      new HttpBffCounterClient({
+        baseUrl: process.env['ROKIBRAIN_BFF_URL'],
+        token: process.env['ROKIBRAIN_DEV_JWT'],
+      }),
+    );
+  } else {
+    // Failing closed — no client = every withAntiBan call refuses.
+    setBffCounterClient(null);
+  }
+
+  const parent = opts.parentPort ?? getParentPort();
+  if (parent) {
+    wireParentPort(parent, supervisor);
+  }
+
+  const shutdown = async (): Promise<void> => {
+    await supervisor.stopAll(true);
+    await ws.close();
+  };
+
+  if (parent) {
+    parent.postMessage({
+      kind: 'ready',
+      wsPort: ws.port,
+      status: supervisor.status(),
+    });
+  }
+
+  return { supervisor, ws, shutdown };
+}
+
+function wireParentPort(parent: ParentPortLike, supervisor: Supervisor): void {
+  supervisor.onStatusChange((status) => {
+    parent.postMessage({ kind: 'status', status });
+  });
+
+  parent.on('message', (m) => {
+    void handleInbound(parent, supervisor, m.data);
+  });
+
+  // Best-effort clean shutdown when main quits.
+  process.on('SIGTERM', () => {
+    void supervisor.stopAll(true).then(() => process.exit(0));
+  });
+  process.on('SIGINT', () => {
+    void supervisor.stopAll(true).then(() => process.exit(0));
+  });
+}
+
+async function handleInbound(
+  parent: ParentPortLike,
+  supervisor: Supervisor,
+  msg: SupervisorInboundMessage,
+): Promise<void> {
+  try {
+    switch (msg.kind) {
+      case 'startAll':
+        await supervisor.startAll();
+        break;
+      case 'stopAll':
+        await supervisor.stopAll(msg.graceful ?? true);
+        break;
+      case 'emergencyStop':
+        await supervisor.emergencyStop();
+        break;
+      case 'resume':
+        supervisor.resume();
+        break;
+      case 'unlock':
+        supervisor.unlock(msg.childId);
+        break;
+      case 'getStatus':
+        parent.postMessage({ kind: 'status', status: supervisor.status() });
+        break;
+      case 'getWsPort':
+        parent.postMessage({ kind: 'wsPort', port: supervisor.status().wsPort });
+        break;
+      default: {
+        const _exhaustive: never = msg;
+        void _exhaustive;
+      }
+    }
+  } catch (err) {
+    parent.postMessage({
+      kind: 'error',
+      message: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
+
+function log(level: 'info' | 'warn', msg: string, data?: unknown): void {
+  // Daemon-internal logging — falls through to stderr (which Electron pipes
+  // to ~/Library/Logs/rokibrain-app/stderr.log via launchd). Children get
+  // their own per-child loggers via ChildLogger.
+  const line = JSON.stringify({ ts: new Date().toISOString(), level, msg, data });
+  if (level === 'warn') process.stderr.write(line + '\n');
+  else process.stdout.write(line + '\n');
+}
+
+// -----------------------------------------------------------------------------
+// Auto-bootstrap when loaded as the utilityProcess entry. Skip when imported
+// from tests (jest sets `NODE_ENV='test'`).
+// -----------------------------------------------------------------------------
+
+if (process.env['NODE_ENV'] !== 'test' && getParentPort()) {
+  bootstrapDaemon().catch((err) => {
+    process.stderr.write(`daemon bootstrap failed: ${String(err)}\n`);
+    process.exit(1);
+  });
+}

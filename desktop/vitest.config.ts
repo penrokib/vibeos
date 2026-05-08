@@ -11,5 +11,8 @@ export default defineConfig({
     globals: true,
     environment: 'happy-dom',
     setupFiles: ['./src/renderer/__tests__/setup.ts'],
+    // Renderer-only: daemon tests run under jest (jest.config.cjs / yarn test:daemon)
+    include: ['src/renderer/**/__tests__/**/*.test.{ts,tsx}'],
+    exclude: ['src/daemon/**'],
   },
 });
