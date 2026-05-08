@@ -42,6 +42,7 @@ describe("AuthService", () => {
         sub: "roki@example.com",
         email: "roki@example.com",
         role: "admin",
+        tenantId: "roki",
       });
     });
 
@@ -75,7 +76,12 @@ describe("AuthService", () => {
       });
 
       const payload = await service.validate("tester@x.com", password);
-      expect(payload).toEqual({ sub: "tester@x.com", email: "tester@x.com", role: "tester" });
+      expect(payload).toEqual({
+        sub: "tester@x.com",
+        email: "tester@x.com",
+        role: "tester",
+        tenantId: "roki",
+      });
     });
 
     it("ignores malformed TESTER_USERS_JSON instead of crashing", async () => {
@@ -99,11 +105,12 @@ describe("AuthService", () => {
         sub: "roki",
         email: "r@x.com",
         role: "admin",
+        tenantId: "roki",
       });
 
       expect(token).toBe("signed.jwt.token");
       expect(jwt.sign).toHaveBeenCalledWith(
-        { sub: "roki", email: "r@x.com", role: "admin" },
+        { sub: "roki", email: "r@x.com", role: "admin", tenantId: "roki" },
         { expiresIn: "12h" },
       );
     });
