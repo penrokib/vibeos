@@ -27,6 +27,7 @@ import { Supervisor } from '../../supervisor';
 import { SearchService } from '../../search/search.service';
 import { setBffCounterClient, type BffCounterClient, UnsafeKeystrokeError } from '../../anti-ban';
 import { WaChild } from '../../children/wa/wa-child';
+import { SendPipeline } from '../../send-pipeline';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -72,6 +73,8 @@ async function buildServer(opts: {
   antiBanClient?: BffCounterClient;
   waChildId?: string;
   waAccount?: string;
+  /** Cycle 17: optional SendPipeline injection for mesh.send_draft tests. */
+  sendPipeline?: SendPipeline;
 }) {
   const supervisor = new Supervisor({ disableTimers: true });
   const account = opts.waAccount ?? 'personal';
@@ -100,6 +103,7 @@ async function buildServer(opts: {
     supervisor,
     searchService,
     digestGenerator: mockDigestGenerator,
+    sendPipeline: opts.sendPipeline,
   });
 
   return { server, supervisor, searchService };
@@ -256,45 +260,59 @@ describe('MeshMcpServer — mesh.send_draft anti-ban hardwall', () => {
     global.fetch = originalFetch;
   });
 
-  test('send_draft fails closed when anti-ban gate refuses', async () => {
-    // Mock global fetch so bffGet returns the approved draft
-    global.fetch = makeFetch({
-      '/mesh/drafts/': {
+  test('send_draft fails closed when anti-ban gate refuses (Cycle 17 SendPipeline)', async () => {
+    // Cycle 17: mesh.send_draft now goes through SendPipeline.
+    // Inject a SendPipeline with a refusing anti-ban client + fetch that returns a draft.
+    const draftFetch = makeFetch({
+      '/agency/drafts/draft-123': {
         status: 200,
-        body: { draft: { account: 'personal', to: 'bob@s.whatsapp.net', text: 'hello', status: 'approved' } },
+        body: { id: 'draft-123', account: 'personal', recipient: 'bob@s.whatsapp.net', text: 'hello', persona: 'roki' },
       },
+      '/refuse': { status: 200, body: { ok: true } },
+      '/sent': { status: 200, body: { ok: true } },
+      '/error': { status: 200, body: { ok: true } },
       '/status': { status: 200, body: { status: 'open', name: 'personal' } },
     });
 
-    const { server, supervisor } = await buildServer({
+    const { server, supervisor } = await buildServer({ antiBanClient: refuseClient });
+    const pipeline = new SendPipeline({
+      supervisor,
       antiBanClient: refuseClient,
+      fetchImpl: draftFetch,
     });
     await supervisor.startAll();
 
-    const handler = getToolHandler(server, 'mesh.send_draft');
+    // Re-create server with the pipeline injected
+    const searchService = new SearchService();
+    const mockDigestGenerator = {
+      generate: jest.fn(),
+    } as unknown as import('../../digest/digest-generator').DigestGenerator;
+    const serverWithPipeline = new MeshMcpServer({
+      supervisor,
+      searchService,
+      digestGenerator: mockDigestGenerator,
+      sendPipeline: pipeline,
+    });
+
+    process.env['VIBEOS_MCP_TOKEN'] = VALID_TOKEN;
+    const handler = getToolHandler(serverWithPipeline, 'mesh.send_draft');
     const result = await handler({ draft_id: 'draft-123' }, VALID_AUTH) as { content: Array<{ text: string }> };
-    const parsed = JSON.parse(result.content[0].text) as { error: string };
-    // Should be SEND_FAILED because anti-ban gate threw WaAntiBanRefusedError
-    expect(parsed.error).toBe('SEND_FAILED');
-    expect(result.content[0].text).toContain('anti-ban');
+    const parsed = JSON.parse(result.content[0].text) as { status: string; reason: string };
+    // Cycle 17: SendPipeline returns {status:'refused', reason:'...'} — not {error:'SEND_FAILED'}
+    expect(parsed.status).toBe('refused');
+    expect(parsed.reason).toContain('hourly_limit_exceeded');
   });
 
-  test('send_draft refuses if draft status is not approved', async () => {
-    // Mock global fetch so bffGet returns a pending draft
-    global.fetch = makeFetch({
-      '/mesh/drafts/': {
-        status: 200,
-        body: { draft: { account: 'personal', to: 'bob@s.whatsapp.net', text: 'hello', status: 'pending' } },
-      },
-      '/status': { status: 200, body: { status: 'open', name: 'personal' } },
-    });
-
+  test('send_draft returns SEND_PIPELINE_NOT_CONFIGURED when pipeline not injected', async () => {
+    // Guard test: if MeshMcpServer is constructed without a sendPipeline, it
+    // returns a clear error rather than silently failing.
     const { server, supervisor } = await buildServer({ antiBanClient: allowClient });
     await supervisor.startAll();
+
     const handler = getToolHandler(server, 'mesh.send_draft');
     const result = await handler({ draft_id: 'draft-456' }, VALID_AUTH) as { content: Array<{ text: string }> };
     const parsed = JSON.parse(result.content[0].text) as { error: string };
-    expect(parsed.error).toBe('DRAFT_NOT_APPROVED');
+    expect(parsed.error).toBe('SEND_PIPELINE_NOT_CONFIGURED');
   });
 });
 

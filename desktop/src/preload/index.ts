@@ -31,6 +31,10 @@ import {
   type DaemonEmergencyStopPayload,
   type DaemonStatusPayload,
   type DaemonWsPortPayload,
+  type DraftApproveInput,
+  type DraftApproveResult,
+  type DraftRejectInput,
+  type DraftsListResult,
   type ListBugsInput,
   type ListBugsResult,
   type MeshAccountsPayload,
@@ -164,6 +168,14 @@ const api: RokibrainBridgeApi = {
       ipcRenderer.invoke(DIGEST_LATEST, input) as Promise<DigestLatestResult>,
     onLatest: (handler: (payload: DigestLatestResult) => void) =>
       subscribe<DigestLatestResult>(DIGEST_LATEST, handler),
+  },
+  drafts: {
+    approve: (input: DraftApproveInput) =>
+      ipcRenderer.invoke(IPC.DRAFTS_APPROVE, input) as Promise<DraftApproveResult>,
+    reject: (input: DraftRejectInput) =>
+      ipcRenderer.invoke(IPC.DRAFTS_REJECT, input) as Promise<void>,
+    list: () =>
+      ipcRenderer.invoke(IPC.DRAFTS_LIST) as Promise<DraftsListResult>,
   },
   app: {
     quit: () => ipcRenderer.send(IPC.APP_QUIT),
