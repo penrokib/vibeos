@@ -20,13 +20,18 @@ export class JwtStrategy extends PassportStrategy(Strategy, "jwt") {
     });
   }
 
-  validate(payload: Omit<JwtPayload, "role"> & { role?: string }): JwtPayload {
+  validate(
+    payload: Omit<JwtPayload, "role" | "tenantId"> & { role?: string; tenantId?: string },
+  ): JwtPayload {
     if (!payload?.sub) throw new UnauthorizedException("Malformed token");
     // Default to "admin" so existing Roki tokens (issued before roles existed)
     // keep working. Tester tokens MUST carry an explicit `role: "tester"`.
     const role: UserRole = (USER_ROLES as readonly string[]).includes(payload.role ?? "")
       ? (payload.role as UserRole)
       : "admin";
-    return { ...payload, role };
+    // Default to "roki" so legacy single-tenant tokens keep working. New OSS
+    // signups populate tenantId with a UUID at issue time.
+    const tenantId = payload.tenantId ?? "roki";
+    return { ...payload, role, tenantId };
   }
 }

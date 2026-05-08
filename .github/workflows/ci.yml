@@ -30,4 +30,9 @@ jobs:
         with:
           node-version: '22'
       - run: corepack enable && yarn install --immutable
+      # Generate Prisma client before any package using @prisma/client compiles.
+      - run: yarn workspace @vibeos/database exec prisma generate
+      # Build shared packages so workspace consumers can resolve their dist/ types.
+      - run: yarn workspace @vibeos/database build
+      - run: yarn workspace @vibeos/auth build
       - run: yarn type-check
