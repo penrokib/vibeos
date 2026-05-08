@@ -26,6 +26,7 @@
     "@nestjs/platform-express": "^11.0.0",
     "@nestjs/platform-socket.io": "^11.0.0",
     "@nestjs/websockets": "^11.0.0",
+    "@parse/node-apn": "^8.1.0",
     "@vibeos/auth": "workspace:*",
     "@vibeos/database": "workspace:*",
     "class-transformer": "^0.5.1",

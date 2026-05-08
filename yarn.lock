@@ -2352,6 +2352,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@parse/node-apn@npm:^8.1.0":
+  version: 8.1.0
+  resolution: "@parse/node-apn@npm:8.1.0"
+  dependencies:
+    debug: "npm:4.4.3"
+    jsonwebtoken: "npm:9.0.3"
+    node-forge: "npm:1.4.0"
+    verror: "npm:1.10.1"
+  checksum: 10c0/a159e7ed3f35dd4cf50d62848c4f7fe411436bda9adf82325a1773326b8fe6a5c48a862ba8c6f661454eca733c5723a9831faa1b5df4a01d0ae30a6f55df963f
+  languageName: node
+  linkType: hard
+
 "@pkgjs/parseargs@npm:^0.11.0":
   version: 0.11.0
   resolution: "@pkgjs/parseargs@npm:0.11.0"
@@ -3970,6 +3982,7 @@ __metadata:
     "@nestjs/schematics": "npm:^11.0.0"
     "@nestjs/testing": "npm:^11.1.19"
     "@nestjs/websockets": "npm:^11.0.0"
+    "@parse/node-apn": "npm:^8.1.0"
     "@swc/cli": "npm:^0.8.0"
     "@swc/core": "npm:^1.15.13"
     "@types/cookie-parser": "npm:^1.4.10"
@@ -4049,6 +4062,8 @@ __metadata:
     vite: "npm:^6.0.0"
     vitest: "npm:^4.1.5"
     ws: "npm:^8.18.0"
+    xterm: "npm:^5.3.0"
+    xterm-addon-fit: "npm:^0.8.0"
   languageName: unknown
   linkType: soft
 
@@ -5967,7 +5982,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"debug@npm:4, debug@npm:^4.1.0, debug@npm:^4.1.1, debug@npm:^4.3.1, debug@npm:^4.3.3, debug@npm:^4.3.4, debug@npm:^4.3.7, debug@npm:^4.4.0, debug@npm:^4.4.3, debug@npm:~4.4.1":
+"debug@npm:4, debug@npm:4.4.3, debug@npm:^4.1.0, debug@npm:^4.1.1, debug@npm:^4.3.1, debug@npm:^4.3.3, debug@npm:^4.3.4, debug@npm:^4.3.7, debug@npm:^4.4.0, debug@npm:^4.4.3, debug@npm:~4.4.1":
   version: 4.4.3
   resolution: "debug@npm:4.4.3"
   dependencies:
@@ -9836,6 +9851,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"node-forge@npm:1.4.0":
+  version: 1.4.0
+  resolution: "node-forge@npm:1.4.0"
+  checksum: 10c0/67330a5f1f95257a4c8a93b7d555abe87b5f15e350123aa396c97a21a8ca94f9c6549008eb2c73668a91e0d7e3a905785acbd8f8bd0751c29401292011f8f8e1
+  languageName: node
+  linkType: hard
+
 "node-gyp@npm:^9.0.0":
   version: 9.4.1
   resolution: "node-gyp@npm:9.4.1"
@@ -12502,7 +12524,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"verror@npm:^1.10.0":
+"verror@npm:1.10.1, verror@npm:^1.10.0":
   version: 1.10.1
   resolution: "verror@npm:1.10.1"
   dependencies:
@@ -12975,6 +12997,22 @@ __metadata:
   version: 2.2.0
   resolution: "xmlchars@npm:2.2.0"
   checksum: 10c0/b64b535861a6f310c5d9bfa10834cf49127c71922c297da9d4d1b45eeaae40bf9b4363275876088fbe2667e5db028d2cd4f8ee72eed9bede840a67d57dab7593
+  languageName: node
+  linkType: hard
+
+"xterm-addon-fit@npm:^0.8.0":
+  version: 0.8.0
+  resolution: "xterm-addon-fit@npm:0.8.0"
+  peerDependencies:
+    xterm: ^5.0.0
+  checksum: 10c0/39f77c9ec74bcc048ad74fbc4b9d610070c0a67971837f7edf92a8d21d65189c887986713d6ab22c04e2704253022488324d27fdb2425dc8aa95a9b679703101
+  languageName: node
+  linkType: hard
+
+"xterm@npm:^5.3.0":
+  version: 5.3.0
+  resolution: "xterm@npm:5.3.0"
+  checksum: 10c0/39bf5ea933cc2f65d5970560d065b4db645ed03c820bcf6c6239bd504e41a876ab1a773ad9e4e09476ba85a4891534702b9fbb885b0838d79e6620ed2f856bae
   languageName: node
   linkType: hard
 

@@ -26,6 +26,16 @@ afterAll(() => server.close());
   daemon: {
     onStatus: () => () => {},
     getWsPort: async () => ({ port: 0 }),
+    // M02 supervisor methods
+    getSupervisorStatus: async () => ({
+      wsPort: 0,
+      uptime: 0,
+      emergencyStopped: false,
+      children: [],
+    }),
+    onSupervisorStatus: () => () => {},
+    restartChild: async () => {},
+    emergencyStop: async () => {},
   },
   tabs: {
     switch: async () => {},
@@ -39,9 +49,47 @@ afterAll(() => server.close());
     toggle: async () => ({ listening: false }),
     onToggle: () => () => {},
   },
+  cockpit: {
+    listPanes: async () => ({ panes: [] }),
+    openPane: async () => ({ success: true }),
+    input: async () => {},
+    closePane: async () => {},
+    onOutput: () => () => {},
+  },
+  secrets: {
+    get: async (_key: string) => null,
+    set: async (_key: string, _value: string) => {},
+    delete: async (_key: string) => {},
+    list: async () => [],
+  },
+  auth: {
+    status: async () => ({
+      state: 'unenrolled',
+      endpoint: 'https://app.rokibrain.com',
+    }),
+    enroll: async () => {},
+    logout: async () => {},
+    onStatusChange: () => () => {},
+  },
+  bugs: {
+    capture: async () => ({ dataUrl: '' }),
+    submit: async () => ({ success: true }),
+    list: async () => ({ bugs: [], total: 0 }),
+  },
+  mesh: {
+    accounts: async () => ({ accounts: [] }),
+    chats: async () => ({ chats: [] }),
+    messages: async () => ({ messages: [] }),
+  },
+  prs: {
+    list: async () => ({ prs: [] }),
+    merge: async () => ({ success: false, message: 'stub' }),
+    openShell: async () => {},
+  },
   app: {
     quit: () => {},
     version: '0.1.0-test',
     platform: 'darwin',
+    openExternal: async (_url: string) => {},
   },
 };

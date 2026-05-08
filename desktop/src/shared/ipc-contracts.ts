@@ -346,6 +346,60 @@ export interface MeshMessagesPayload {
 // Naming convention: `rb.<domain>.<verb>` — matches design §1 contract.
 // -----------------------------------------------------------------------------
 
+// -----------------------------------------------------------------------------
+// M06a: Cockpit — xterm.js renderer scaffold + echo placeholder IPC
+// Cycle 9 wires a real PTY / tmux bridge-mac child. For now, main echoes input.
+// -----------------------------------------------------------------------------
+
+/** Identifies a single cockpit pane. */
+export interface CockpitPane {
+  id: string;
+  label: string;
+}
+
+/** renderer → main: open a stub pane, returns success. */
+export interface CockpitOpenPaneRequest {
+  paneId: string;
+  cols: number;
+  rows: number;
+}
+
+export interface CockpitOpenPaneResponse {
+  success: boolean;
+}
+
+/** renderer → main: keystroke input; main echoes back via COCKPIT_OUTPUT. */
+export interface CockpitInputRequest {
+  paneId: string;
+  data: string;
+}
+
+/** main → renderer (push): output stream from pane. */
+export interface CockpitOutputPayload {
+  paneId: string;
+  data: string;
+}
+
+/** renderer → main: close a pane. */
+export interface CockpitClosePaneRequest {
+  paneId: string;
+}
+
+/** renderer → main: list panes; v1 returns one stub pane. */
+export interface CockpitListPanesResponse {
+  panes: CockpitPane[];
+}
+
+// -----------------------------------------------------------------------------
+// Sponsor & Telemetry (M16 / Cycle-29)
+// -----------------------------------------------------------------------------
+
+/** Payload for opening an external HTTPS URL via shell.openExternal. */
+export interface OpenExternalPayload {
+  /** Must start with https:// — enforced in main. */
+  url: string;
+}
+
 export const IPC = {
   /** Daemon status broadcasts. main → renderer (push). */
   DAEMON_STATUS: 'rb.daemon.status',
@@ -401,6 +455,18 @@ export const IPC = {
   MESH_CHATS: 'rb.mesh.chats',
   /** Mesh: list messages in a chat. renderer → main. */
   MESH_MESSAGES: 'rb.mesh.messages',
+  /** M06a: open a cockpit pane stub. renderer → main. */
+  COCKPIT_OPEN_PANE: 'rb.cockpit.openPane',
+  /** M06a: send keystroke input to a pane. renderer → main. */
+  COCKPIT_INPUT: 'rb.cockpit.input',
+  /** M06a: output stream from pane. main → renderer (push). */
+  COCKPIT_OUTPUT: 'rb.cockpit.output',
+  /** M06a: close a cockpit pane. renderer → main. */
+  COCKPIT_CLOSE_PANE: 'rb.cockpit.closePane',
+  /** M06a: list cockpit panes. renderer → main. */
+  COCKPIT_LIST_PANES: 'rb.cockpit.listPanes',
+  /** M16: Open an external HTTPS URL (sponsor links, etc.). renderer → main. */
+  APP_OPEN_EXTERNAL: 'rb.app.openExternal',
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];
@@ -416,13 +482,13 @@ export interface RokibrainBridgeApi {
     onStatus: (handler: (payload: DaemonStatusPayload) => void) => () => void;
     /** One-shot fetch of the current ws port. */
     getWsPort: () => Promise<DaemonWsPortPayload>;
-    /** Full supervisor snapshot — children + uptime. */
+    /** M02: Full supervisor snapshot — children + uptime. */
     getSupervisorStatus: () => Promise<SupervisorStatusPayload>;
-    /** Subscribe to supervisor status pushes. */
+    /** M02: Subscribe to supervisor status pushes. */
     onSupervisorStatus: (handler: (payload: SupervisorStatusPayload) => void) => () => void;
-    /** Restart (or unlock-then-restart) a child by id. */
+    /** M02: Restart (or unlock-then-restart) a child by id. */
     restartChild: (req: DaemonChildRestartRequest) => Promise<void>;
-    /** Emergency-stop all children (or resume). */
+    /** M02: Emergency-stop all children (or resume). */
     emergencyStop: (payload?: DaemonEmergencyStopPayload) => Promise<void>;
   };
   tabs: {
@@ -483,11 +549,28 @@ export interface RokibrainBridgeApi {
     /** List messages in a chat (newest first). */
     messages: (req: MeshMessagesRequest) => Promise<MeshMessagesPayload>;
   };
+  cockpit: {
+    /** M06a: open a stub pane (real PTY wired in cycle 9). */
+    openPane: (req: CockpitOpenPaneRequest) => Promise<CockpitOpenPaneResponse>;
+    /** M06a: send keystroke data to pane; main echoes it back for v1. */
+    input: (req: CockpitInputRequest) => Promise<void>;
+    /** M06a: close a pane stub. */
+    closePane: (req: CockpitClosePaneRequest) => Promise<void>;
+    /** M06a: list panes; v1 returns the single echo stub. */
+    listPanes: () => Promise<CockpitListPanesResponse>;
+    /** M06a: subscribe to output pushed from main; returns unsubscribe fn. */
+    onOutput: (handler: (payload: CockpitOutputPayload) => void) => () => void;
+  };
   app: {
     quit: () => void;
     /** Build/version metadata for footer + bug reports. */
     version: string;
     platform: NodeJS.Platform;
+    /**
+     * Open an HTTPS URL in the system default browser.
+     * Rejects if URL is not https:// (defense against javascript: URIs).
+     */
+    openExternal: (url: string) => Promise<void>;
   };
 }
 

@@ -22,6 +22,7 @@ import {
   ipcMain,
   Menu,
   nativeImage,
+  shell,
   Tray,
   utilityProcess,
   type UtilityProcess,
@@ -33,8 +34,14 @@ import {
   IPC,
   TAB_IDS,
   type AuthEnrollPayload,
+  type OpenExternalPayload,
   type AuthStatusPayload,
   type CaptureScreenshotPayload,
+  type CockpitInputRequest,
+  type CockpitListPanesResponse,
+  type CockpitOpenPaneRequest,
+  type CockpitOpenPaneResponse,
+  type CockpitOutputPayload,
   type DaemonChildRestartRequest,
   type DaemonEmergencyStopPayload,
   type DaemonStatusPayload,
@@ -82,6 +89,7 @@ import {
 import * as gh from './gh';
 import { captureScreenshot } from './screenshot';
 import { deleteSecret, getSecret, listSecrets, setSecret } from './secrets';
+import { initTelemetry, reportCrash } from './telemetry';
 
 // ---- module state ----------------------------------------------------------
 
@@ -479,6 +487,50 @@ function registerIpcHandlers(): void {
     return listBugs(input);
   });
 
+  // M06a: Cockpit — echo placeholder (cycle 9 wires real PTY / bridge-mac).
+  ipcMain.handle(
+    IPC.COCKPIT_OPEN_PANE,
+    (_evt, _req: CockpitOpenPaneRequest): CockpitOpenPaneResponse => {
+      console.log('[cockpit] openPane stub — real PTY wired in cycle 9');
+      return { success: true };
+    },
+  );
+
+  ipcMain.handle(
+    IPC.COCKPIT_INPUT,
+    (_evt, req: CockpitInputRequest): void => {
+      // Echo the input back to ALL windows as COCKPIT_OUTPUT (no PTY in v1).
+      const echo: CockpitOutputPayload = {
+        paneId: req.paneId,
+        data: req.data + ' (echo from main, no PTY yet)\r\n',
+      };
+      broadcast(IPC.COCKPIT_OUTPUT, echo);
+    },
+  );
+
+  ipcMain.handle(IPC.COCKPIT_CLOSE_PANE, (_evt, _req): void => {
+    console.log('[cockpit] closePane stub — no-op in v1');
+  });
+
+  ipcMain.handle(IPC.COCKPIT_LIST_PANES, (): CockpitListPanesResponse => ({
+    panes: [
+      {
+        id: 'echo',
+        label: 'Echo (placeholder — bridge-mac coming in cycle 9)',
+      },
+    ],
+  }));
+
+  // M16: Open external HTTPS URL (sponsor links, docs).
+  // Validates that the URL is https:// before calling shell.openExternal —
+  // defense-in-depth against javascript: URIs from any future plugin surface.
+  ipcMain.handle(IPC.APP_OPEN_EXTERNAL, async (_evt, payload: OpenExternalPayload): Promise<void> => {
+    const { url } = payload;
+    if (typeof url !== 'string' || !url.startsWith('https://')) {
+      throw new Error(`openExternal rejected non-https URL: ${String(url)}`);
+    }
+    await shell.openExternal(url);
+  });
   // Mesh — read-only over the local multi-account WhatsApp backend.
   // Sending stays drafts-only; no MESH_SEND channel exposed.
   ipcMain.handle(IPC.MESH_ACCOUNTS, (): Promise<MeshAccountsPayload> => fetchMeshAccounts());
@@ -489,6 +541,9 @@ function registerIpcHandlers(): void {
     IPC.MESH_MESSAGES,
     (_evt, req: MeshMessagesRequest): Promise<MeshMessagesPayload> => fetchMeshMessages(req),
   );
+
+  // Note: DAEMON_SUPERVISOR_STATUS, DAEMON_CHILD_RESTART, DAEMON_EMERGENCY_STOP
+  // are registered above by the M02 daemon block. No duplicates here.
 }
 
 // ---- mesh backend client ---------------------------------------------------
@@ -716,6 +771,14 @@ app.whenReady().then(() => {
 
   configureAutoUpdater();
   registerIpcHandlers();
+
+  // M16: Initialize telemetry (reads telemetry_enabled from secrets; no-op if false).
+  void initTelemetry(getSecret);
+
+  // M16: Wire uncaught exception → telemetry (PII-scrubbed, only if opt-in).
+  process.on('uncaughtException', (err) => {
+    void reportCrash(err);
+  });
 
   // M12: Initialize auth state from stored secrets.
   setAuthBroadcast(broadcastAuthStatus);

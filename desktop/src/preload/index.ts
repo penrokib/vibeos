@@ -9,8 +9,15 @@ import { contextBridge, ipcRenderer } from 'electron';
 import {
   IPC,
   type AuthEnrollPayload,
+  type OpenExternalPayload,
   type AuthStatusPayload,
   type CaptureScreenshotPayload,
+  type CockpitClosePaneRequest,
+  type CockpitInputRequest,
+  type CockpitListPanesResponse,
+  type CockpitOpenPaneRequest,
+  type CockpitOpenPaneResponse,
+  type CockpitOutputPayload,
   type DaemonChildRestartRequest,
   type DaemonEmergencyStopPayload,
   type DaemonStatusPayload,
@@ -110,10 +117,27 @@ const api: RokibrainBridgeApi = {
     messages: (req: MeshMessagesRequest) =>
       ipcRenderer.invoke(IPC.MESH_MESSAGES, req) as Promise<MeshMessagesPayload>,
   },
+  cockpit: {
+    openPane: (req: CockpitOpenPaneRequest) =>
+      ipcRenderer.invoke(IPC.COCKPIT_OPEN_PANE, req) as Promise<CockpitOpenPaneResponse>,
+    input: (req: CockpitInputRequest) =>
+      ipcRenderer.invoke(IPC.COCKPIT_INPUT, req) as Promise<void>,
+    closePane: (req: CockpitClosePaneRequest) =>
+      ipcRenderer.invoke(IPC.COCKPIT_CLOSE_PANE, req) as Promise<void>,
+    listPanes: () =>
+      ipcRenderer.invoke(IPC.COCKPIT_LIST_PANES) as Promise<CockpitListPanesResponse>,
+    onOutput: (handler: (payload: CockpitOutputPayload) => void) =>
+      subscribe<CockpitOutputPayload>(IPC.COCKPIT_OUTPUT, handler),
+  },
   app: {
     quit: () => ipcRenderer.send(IPC.APP_QUIT),
     version: process.env.npm_package_version ?? '0.1.0',
     platform: process.platform,
+    openExternal: (url: string) =>
+      ipcRenderer.invoke(
+        IPC.APP_OPEN_EXTERNAL,
+        { url } satisfies OpenExternalPayload,
+      ) as Promise<void>,
   },
 };
 

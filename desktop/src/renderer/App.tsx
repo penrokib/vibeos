@@ -24,6 +24,8 @@ import { PersonasTab } from './personas/PersonasTab';
 import { DraftsTab } from './drafts/DraftsTab';
 import { DecisionsTab } from './decisions/DecisionsTab';
 import { MeshTab } from './mesh/MeshTab';
+import { ConnectionsTab } from './connections/ConnectionsTab';
+import { CockpitTab } from './cockpit/CockpitTab';
 
 interface TabMeta {
   id: TabId;
@@ -128,7 +130,9 @@ export function App(): JSX.Element {
 
       {/* Main */}
       <main className="flex-1 overflow-auto">
-        {activeTab === 'mesh' ? (
+        {activeTab === 'cockpit' ? (
+          <CockpitTab />
+        ) : activeTab === 'mesh' ? (
           <MeshTab />
         ) : activeTab === 'knowledge' ? (
           <KnowledgeTab />
@@ -144,6 +148,8 @@ export function App(): JSX.Element {
           <DraftsTab />
         ) : activeTab === 'decisions' ? (
           <DecisionsTab />
+        ) : activeTab === 'connections' ? (
+          <ConnectionsTab />
         ) : (
           <TabPlaceholder
             tabId={activeMeta.id}
