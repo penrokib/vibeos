@@ -3,25 +3,36 @@ import SwiftUI
 struct TodayView: View {
     @State private var store = DigestStore()
 
+    // Cycle 25: PTT + voice compose
+    @State private var voiceStore = VoiceComposeStore()
+    @State private var draftsStore = DraftsStore()
+
     var body: some View {
-        NavigationStack {
-            Group {
-                if store.loading && store.digest == nil {
-                    loadingView
-                } else {
-                    contentList
+        ZStack(alignment: .bottomTrailing) {
+            NavigationStack {
+                Group {
+                    if store.loading && store.digest == nil {
+                        loadingView
+                    } else {
+                        contentList
+                    }
+                }
+                .navigationTitle("Today")
+                .navigationBarTitleDisplayMode(.large)
+                .refreshable {
+                    await store.refresh()
+                }
+                .onAppear {
+                    if store.digest == nil {
+                        Task { await store.refresh() }
+                    }
                 }
             }
-            .navigationTitle("Today")
-            .navigationBarTitleDisplayMode(.large)
-            .refreshable {
-                await store.refresh()
-            }
-            .onAppear {
-                if store.digest == nil {
-                    Task { await store.refresh() }
-                }
-            }
+
+            // Cycle 25: PTT floating button
+            PTTButton(store: voiceStore, draftsStore: draftsStore)
+                .padding(.trailing, 20)
+                .padding(.bottom, 20)
         }
     }
 

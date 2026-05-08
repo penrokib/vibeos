@@ -5,37 +5,49 @@ import SwiftUI
 struct DraftsTab: View {
     @State private var store = DraftsStore()
 
+    // Cycle 25: PTT + voice compose (shares the same DraftsStore so new draft
+    // appears immediately in this tab on VoiceComposeStore.state == .done)
+    @State private var voiceStore = VoiceComposeStore()
+
     var body: some View {
-        NavigationStack {
-            Group {
-                if store.loading && store.drafts.isEmpty {
-                    loadingView
-                } else {
-                    draftsList
-                }
-            }
-            .navigationTitle("Drafts")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        Task { await store.refresh() }
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
+        ZStack(alignment: .bottomTrailing) {
+            NavigationStack {
+                Group {
+                    if store.loading && store.drafts.isEmpty {
+                        loadingView
+                    } else {
+                        draftsList
                     }
-                    .disabled(store.loading)
+                }
+                .navigationTitle("Drafts")
+                .navigationBarTitleDisplayMode(.large)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button {
+                            Task { await store.refresh() }
+                        } label: {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                        .disabled(store.loading)
+                    }
+                }
+                .refreshable {
+                    await store.refresh()
+                }
+                .onAppear {
+                    if store.drafts.isEmpty {
+                        Task { await store.refresh() }
+                    }
                 }
             }
-            .refreshable {
-                await store.refresh()
-            }
-            .onAppear {
-                if store.drafts.isEmpty {
-                    Task { await store.refresh() }
-                }
-            }
+            .environment(store)
+
+            // Cycle 25: PTT floating button — passes shared DraftsStore so
+            // completed voice compose immediately refreshes this list.
+            PTTButton(store: voiceStore, draftsStore: store)
+                .padding(.trailing, 20)
+                .padding(.bottom, 20)
         }
-        .environment(store)
     }
 
     // MARK: - Loading
