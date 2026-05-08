@@ -15,6 +15,7 @@ import { InstallerModule } from "./installer/installer.module";
 import { KnowledgeSearchModule } from "./knowledge-search/knowledge-search.module";
 import { LettaProxyModule } from "./letta-proxy/letta-proxy.module";
 import { MeshModule } from "./mesh/mesh.module";
+import { PushModule } from "./push/push.module";
 import { TerminalModule } from "./terminal/terminal.module";
 import { VoiceModule } from "./voice/voice.module";
 
@@ -39,6 +40,7 @@ import { VoiceModule } from "./voice/voice.module";
     LettaProxyModule,
     DevicesModule,
     MeshModule,
+    PushModule,
     TerminalModule,
     VoiceModule,
   ],
