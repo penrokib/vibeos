@@ -37,6 +37,9 @@ import {
   type OpenExternalPayload,
   type AuthStatusPayload,
   type CaptureScreenshotPayload,
+  type CcFleetListPayload,
+  type CcFleetSubmitInput,
+  type CcFleetSubmitResult,
   type CockpitInputRequest,
   type CockpitListPanesResponse,
   type CockpitOpenPaneRequest,
@@ -74,6 +77,7 @@ import {
   type TabSwitchPayload,
   type VoiceTogglePayload,
 } from '../shared/ipc-contracts';
+import { FleetManager } from '../daemon/cc-fleet/fleet-manager';
 import type {
   SupervisorInboundMessage,
   SupervisorOutboundMessage,
@@ -114,6 +118,11 @@ let supervisorStatus: SupervisorStatusPayload = {
 // pending request bookkeeping for daemon-IPC round-trips
 let pendingStatusResolvers: Array<(s: SupervisorStatusPayload) => void> = [];
 let pendingWsPortResolvers: Array<(p: DaemonWsPortPayload) => void> = [];
+
+// ---- CC Fleet manager (singleton) ------------------------------------------
+// Manages Claude Code subprocess pool; accounts registered from env at startup.
+// API keys read from env at spawn time — never stored in process state.
+const ccFleet = new FleetManager();
 
 // ---- autoupdater stub (M13 wires real signing) -----------------------------
 
@@ -544,6 +553,28 @@ function registerIpcHandlers(): void {
 
   // Note: DAEMON_SUPERVISOR_STATUS, DAEMON_CHILD_RESTART, DAEMON_EMERGENCY_STOP
   // are registered above by the M02 daemon block. No duplicates here.
+
+  // CC Fleet handlers (renderer → main → FleetManager).
+  ipcMain.handle(IPC.CC_FLEET_LIST, (): CcFleetListPayload => ({
+    accounts: ccFleet.list(),
+  }));
+  ipcMain.handle(
+    IPC.CC_FLEET_SUBMIT,
+    async (_evt, input: CcFleetSubmitInput): Promise<CcFleetSubmitResult> => {
+      const result = await ccFleet.submit({
+        id: input.id,
+        prompt: input.prompt,
+        account: input.account,
+        persona: input.persona,
+      });
+      return {
+        jobId: result.jobId,
+        account: result.account,
+        output: result.output,
+        durationMs: result.durationMs,
+      };
+    },
+  );
 }
 
 // ---- mesh backend client ---------------------------------------------------
@@ -851,4 +882,5 @@ app.on('window-all-closed', () => {
 
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
+  ccFleet.destroy();
 });

@@ -12,6 +12,9 @@ import {
   type OpenExternalPayload,
   type AuthStatusPayload,
   type CaptureScreenshotPayload,
+  type CcFleetListPayload,
+  type CcFleetSubmitInput,
+  type CcFleetSubmitResult,
   type CockpitClosePaneRequest,
   type CockpitInputRequest,
   type CockpitListPanesResponse,
@@ -128,6 +131,11 @@ const api: RokibrainBridgeApi = {
       ipcRenderer.invoke(IPC.COCKPIT_LIST_PANES) as Promise<CockpitListPanesResponse>,
     onOutput: (handler: (payload: CockpitOutputPayload) => void) =>
       subscribe<CockpitOutputPayload>(IPC.COCKPIT_OUTPUT, handler),
+  },
+  ccFleet: {
+    list: () => ipcRenderer.invoke(IPC.CC_FLEET_LIST) as Promise<CcFleetListPayload>,
+    submit: (input: CcFleetSubmitInput) =>
+      ipcRenderer.invoke(IPC.CC_FLEET_SUBMIT, input) as Promise<CcFleetSubmitResult>,
   },
   app: {
     quit: () => ipcRenderer.send(IPC.APP_QUIT),
