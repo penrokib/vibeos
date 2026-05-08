@@ -85,8 +85,11 @@ import {
   type DraftApproveResult,
   type DraftRejectInput,
   type DraftsListResult,
+  type ComposeDraftInput,
+  type ComposeDraftResult,
 } from '../shared/ipc-contracts';
 import { FleetManager } from '../daemon/cc-fleet/fleet-manager';
+import { ComposePipeline } from '../daemon/compose/compose-pipeline';
 import { TmuxChild } from '../daemon/children/tmux/tmux-child';
 import { VoiceChild } from '../daemon/children/voice/voice-child';
 import type {
@@ -157,6 +160,20 @@ const pendingSendDraftResolvers = new Map<string, (r: SendResult) => void>();
 // Manages Claude Code subprocess pool; accounts registered from env at startup.
 // API keys read from env at spawn time — never stored in process state.
 const ccFleet = new FleetManager();
+
+// ---- Cycle 18: ComposePipeline (main-side) ----------------------------------
+// Handles renderer-initiated compose requests. Uses the same ccFleet above.
+// For phone-originated compose: the BFF WS path routes to daemon's instance.
+// Supervisor is only stored in ComposePipeline for potential future use;
+// the renderer-IPC compose path doesn't need child lookup.
+const mainComposePipeline = new ComposePipeline({
+  fleet: ccFleet,
+  // The main process has no Supervisor instance (daemon owns it).
+  // ComposePipeline receives it for injection completeness but the
+  // composeDraft() method only uses fleet + fetchImpl in this path.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supervisor: {} as any,
+});
 
 // ---- M11: VoiceChild (main-side) -------------------------------------------
 // A VoiceChild instance is kept in the main process so that audio buffers sent
@@ -727,6 +744,24 @@ function registerIpcHandlers(): void {
         },
         body: JSON.stringify({ reason: input.reason }),
       });
+    },
+  );
+
+  // Cycle 18: Compose-from-phone IPC handler.
+  // renderer → main → ComposePipeline (CC on Mac) → BFF /agency/drafts.
+  // HARD WALL: never auto-approves. Draft stays 'pending' until user taps approve.
+  ipcMain.handle(
+    IPC.COMPOSE_DRAFT,
+    async (_evt, input: ComposeDraftInput): Promise<ComposeDraftResult> => {
+      const output = await mainComposePipeline.composeDraft(input);
+      if ('error' in output) {
+        return { error: output.error, detail: output.detail };
+      }
+      return {
+        draftId: output.draftId,
+        refinedText: output.refinedText,
+        reasoning: output.reasoning,
+      };
     },
   );
 
