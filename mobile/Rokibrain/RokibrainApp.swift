@@ -39,20 +39,17 @@ struct MainTabView: View {
             InboxTab()
                 .tabItem { Label("Inbox", systemImage: "tray.full") }
 
-            HomeView()
-                .tabItem { Label("Home", systemImage: "house.fill") }
+            DraftsTab()
+                .tabItem { Label("Drafts", systemImage: "tray.and.arrow.down") }
 
             DecisionsView()
                 .tabItem { Label("Decisions", systemImage: "checkmark.seal.fill") }
 
-            DraftsView()
-                .tabItem { Label("Drafts", systemImage: "square.and.pencil") }
-
             TerminalsView()
-                .tabItem { Label("Terminals", systemImage: "terminal.fill") }
+                .tabItem { Label("Devices", systemImage: "terminal.fill") }
 
             SettingsView()
-                .tabItem { Label("Settings", systemImage: "gear") }
+                .tabItem { Label("More", systemImage: "ellipsis.circle.fill") }
         }
     }
 }
