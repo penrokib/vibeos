@@ -40,6 +40,7 @@ import {
   type CcFleetListPayload,
   type CcFleetSubmitInput,
   type CcFleetSubmitResult,
+  type CockpitClosePaneRequest,
   type CockpitInputRequest,
   type CockpitListPanesResponse,
   type CockpitOpenPaneRequest,
@@ -78,6 +79,7 @@ import {
   type VoiceTogglePayload,
 } from '../shared/ipc-contracts';
 import { FleetManager } from '../daemon/cc-fleet/fleet-manager';
+import { TmuxChild } from '../daemon/children/tmux/tmux-child';
 import type {
   SupervisorInboundMessage,
   SupervisorOutboundMessage,
@@ -96,6 +98,25 @@ import { deleteSecret, getSecret, listSecrets, setSecret } from './secrets';
 import { initTelemetry, reportCrash } from './telemetry';
 
 // ---- module state ----------------------------------------------------------
+
+// M06b: Cockpit tmux child — lives in main process for v1 (not in daemon
+// utilityProcess) since it needs to push output to renderer via broadcast().
+// Gate: MESH_TMUX_ENABLED != 'false' (same as daemon gate).
+let cockpitTmuxChild: TmuxChild | null = null;
+
+function getCockpitTmux(): TmuxChild {
+  if (!cockpitTmuxChild) {
+    cockpitTmuxChild = new TmuxChild({ id: 'tmux', platform: 'tmux' });
+    // Wire output → broadcast to renderer
+    cockpitTmuxChild.onOutput((paneId, data) => {
+      const payload: CockpitOutputPayload = { paneId, data };
+      broadcast(IPC.COCKPIT_OUTPUT, payload);
+    });
+    // Start asynchronously — degrade mode means no throw on missing binary
+    void cockpitTmuxChild.start();
+  }
+  return cockpitTmuxChild;
+}
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -496,39 +517,66 @@ function registerIpcHandlers(): void {
     return listBugs(input);
   });
 
-  // M06a: Cockpit — echo placeholder (cycle 9 wires real PTY / bridge-mac).
+  // M06b: Cockpit — real TmuxChild bridge (cycle 9).
+  // In degrade mode (bridge binary not installed), child auto-falls back to
+  // echo-mode with a friendly banner. cc-modal hardwall enforced in TmuxChild.
   ipcMain.handle(
     IPC.COCKPIT_OPEN_PANE,
-    (_evt, _req: CockpitOpenPaneRequest): CockpitOpenPaneResponse => {
-      console.log('[cockpit] openPane stub — real PTY wired in cycle 9');
-      return { success: true };
+    async (_evt, req: CockpitOpenPaneRequest): Promise<CockpitOpenPaneResponse> => {
+      try {
+        const child = getCockpitTmux();
+        await child.openPane(req.paneId, req.cols, req.rows);
+        return { success: true };
+      } catch (err) {
+        console.error('[cockpit] openPane error:', err);
+        return { success: false };
+      }
     },
   );
 
   ipcMain.handle(
     IPC.COCKPIT_INPUT,
     (_evt, req: CockpitInputRequest): void => {
-      // Echo the input back to ALL windows as COCKPIT_OUTPUT (no PTY in v1).
-      const echo: CockpitOutputPayload = {
-        paneId: req.paneId,
-        data: req.data + ' (echo from main, no PTY yet)\r\n',
-      };
-      broadcast(IPC.COCKPIT_OUTPUT, echo);
+      try {
+        const child = getCockpitTmux();
+        // TmuxChild.input() enforces assertSafeTmuxKeystroke internally.
+        // Refusals are surfaced via the output channel (onOutput callback above).
+        // Degrade mode echoes with a friendly banner.
+        child.input(req.paneId, req.data);
+      } catch (err) {
+        // Unexpected errors (not UnsafeKeystrokeError — those are caught inside
+        // TmuxChild.input) — surface as output banner.
+        console.error('[cockpit] input error:', err);
+        const errPayload: CockpitOutputPayload = {
+          paneId: req.paneId,
+          data: `[cockpit error] ${String(err)}\r\n`,
+        };
+        broadcast(IPC.COCKPIT_OUTPUT, errPayload);
+      }
     },
   );
 
-  ipcMain.handle(IPC.COCKPIT_CLOSE_PANE, (_evt, _req): void => {
-    console.log('[cockpit] closePane stub — no-op in v1');
+  ipcMain.handle(IPC.COCKPIT_CLOSE_PANE, async (_evt, req: CockpitClosePaneRequest): Promise<void> => {
+    try {
+      const child = getCockpitTmux();
+      await child.closePane(req.paneId);
+    } catch (err) {
+      console.error('[cockpit] closePane error:', err);
+    }
   });
 
-  ipcMain.handle(IPC.COCKPIT_LIST_PANES, (): CockpitListPanesResponse => ({
-    panes: [
-      {
-        id: 'echo',
-        label: 'Echo (placeholder — bridge-mac coming in cycle 9)',
-      },
-    ],
-  }));
+  ipcMain.handle(IPC.COCKPIT_LIST_PANES, async (): Promise<CockpitListPanesResponse> => {
+    try {
+      const child = getCockpitTmux();
+      const panes = await child.listPanes();
+      return { panes };
+    } catch (err) {
+      console.error('[cockpit] listPanes error:', err);
+      return {
+        panes: [{ id: 'echo', label: 'Echo (bridge error — check logs)' }],
+      };
+    }
+  });
 
   // M16: Open external HTTPS URL (sponsor links, docs).
   // Validates that the URL is https:// before calling shell.openExternal —

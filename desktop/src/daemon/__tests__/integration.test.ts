@@ -40,6 +40,9 @@ function makeFakeParentPort(): FakeParentPort {
 describe('daemon bootstrap + parentPort round-trip', () => {
   it('boots, posts ready, and reports supervisor status snapshots', async () => {
     process.env['ROKIBRAIN_DEV_JWT'] = 'test-token';
+    // Disable tmux child registration so this test's child-count assertions
+    // remain stable regardless of which children bootstrapDaemon registers.
+    process.env['MESH_TMUX_ENABLED'] = 'false';
     const parent = makeFakeParentPort();
 
     const { supervisor, ws, shutdown } = await bootstrapDaemon({
@@ -93,10 +96,13 @@ describe('daemon bootstrap + parentPort round-trip', () => {
 
     await shutdown();
     expect(ws.clientCountForTests).toBe(0);
+    delete process.env['MESH_TMUX_ENABLED'];
   });
 
   it('ws port is a valid bound TCP port (loopback only)', async () => {
     process.env['ROKIBRAIN_DEV_JWT'] = 'tt';
+    // Disable tmux child so the test environment stays lean.
+    process.env['MESH_TMUX_ENABLED'] = 'false';
     const parent = makeFakeParentPort();
     const { ws, shutdown } = await bootstrapDaemon({
       parentPort: parent,
@@ -105,5 +111,6 @@ describe('daemon bootstrap + parentPort round-trip', () => {
     });
     expect(ws.port).toBeGreaterThan(1024);
     await shutdown();
+    delete process.env['MESH_TMUX_ENABLED'];
   });
 });

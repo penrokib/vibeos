@@ -32,6 +32,7 @@ import { Supervisor } from './supervisor';
 import { EnvJwtAuth, DaemonWsServer } from './ws-server';
 import type { SupervisorStatus, ChildState } from './types';
 import { WaChild } from './children/wa/wa-child';
+import { TmuxChild } from './children/tmux/tmux-child';
 
 // -----------------------------------------------------------------------------
 // IPC envelope between main and daemon utilityProcess.
@@ -139,6 +140,21 @@ export async function bootstrapDaemon(
         }),
     );
     log('info', 'wa-personal child registered (MESH_WA_ENABLED=true)');
+  }
+
+  // ---- M06b: TmuxChild registration (MESH_TMUX_ENABLED, default ON) ----------
+  // Default ON because degrade mode is harmless when binary isn't installed.
+  // Set MESH_TMUX_ENABLED=false to opt out.
+  // VIBEOS_BRIDGE_MAC_PATH overrides the bridge binary path (env-only).
+  if (process.env['MESH_TMUX_ENABLED'] !== 'false') {
+    supervisor.register(
+      { id: 'tmux', platform: 'tmux' },
+      async (ctx) => {
+        const child = new TmuxChild(ctx);
+        return child;
+      },
+    );
+    log('info', 'tmux child registered (MESH_TMUX_ENABLED default=on)');
   }
 
   const ws = new DaemonWsServer({
