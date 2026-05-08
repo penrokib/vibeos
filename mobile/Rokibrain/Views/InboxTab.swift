@@ -5,41 +5,52 @@ import SwiftUI
 struct InboxTab: View {
     @State private var store = InboxStore()
 
+    // Cycle 25: PTT + voice compose
+    @State private var voiceStore = VoiceComposeStore()
+    @State private var draftsStore = DraftsStore()
+
     var body: some View {
-        NavigationStack {
-            Group {
-                if store.loading && store.threads.isEmpty {
-                    loadingView
-                } else {
-                    threadList
-                }
-            }
-            .navigationTitle("Inbox")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    HStack(spacing: 8) {
-                        accountMenu
-                        platformMenu
+        ZStack(alignment: .bottomTrailing) {
+            NavigationStack {
+                Group {
+                    if store.loading && store.threads.isEmpty {
+                        loadingView
+                    } else {
+                        threadList
                     }
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
+                .navigationTitle("Inbox")
+                .navigationBarTitleDisplayMode(.large)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        HStack(spacing: 8) {
+                            accountMenu
+                            platformMenu
+                        }
+                    }
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button {
+                            Task { await store.refresh() }
+                        } label: {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                        .disabled(store.loading)
+                    }
+                }
+                .refreshable {
+                    await store.refresh()
+                }
+                .onAppear {
+                    if store.threads.isEmpty {
                         Task { await store.refresh() }
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
                     }
-                    .disabled(store.loading)
                 }
             }
-            .refreshable {
-                await store.refresh()
-            }
-            .onAppear {
-                if store.threads.isEmpty {
-                    Task { await store.refresh() }
-                }
-            }
+
+            // Cycle 25: PTT floating button
+            PTTButton(store: voiceStore, draftsStore: draftsStore)
+                .padding(.trailing, 20)
+                .padding(.bottom, 20)
         }
     }
 

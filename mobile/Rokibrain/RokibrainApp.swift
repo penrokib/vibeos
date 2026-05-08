@@ -2,6 +2,9 @@ import SwiftUI
 
 @main
 struct RokibrainApp: App {
+    // Cycle 25: wire AppDelegate for APNs token registration + deeplink routing
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+
     @StateObject private var auth = AuthStore()
     @State private var appMode = AppMode()
 

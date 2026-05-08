@@ -40,6 +40,10 @@
 		AA0010340000000000000001 /* SignInStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010340000000000000001 /* SignInStep.swift */; };
 		AA0010350000000000000001 /* PairMacStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010350000000000000001 /* PairMacStep.swift */; };
 		AA0010360000000000000001 /* EnablePushStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010360000000000000001 /* EnablePushStep.swift */; };
+		AA0010500000000000000001 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010500000000000000001 /* AppDelegate.swift */; };
+		AA0010510000000000000001 /* PushTokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010510000000000000001 /* PushTokenStore.swift */; };
+		AA0010520000000000000001 /* VoiceComposeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010520000000000000001 /* VoiceComposeStore.swift */; };
+		AA0010530000000000000001 /* PTTButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010530000000000000001 /* PTTButton.swift */; };
 		AA00100D0000000000000001 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AB00100D0000000000000001 /* Preview Assets.xcassets */; };
 		AA0010400000000000000001 /* AppMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010400000000000000001 /* AppMode.swift */; };
 /* End PBXBuildFile section */
@@ -81,7 +85,14 @@
 		AB0010340000000000000001 /* SignInStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInStep.swift; sourceTree = "<group>"; };
 		AB0010350000000000000001 /* PairMacStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairMacStep.swift; sourceTree = "<group>"; };
 		AB0010360000000000000001 /* EnablePushStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnablePushStep.swift; sourceTree = "<group>"; };
+<<<<<<< HEAD
 		AB0010400000000000000001 /* AppMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppMode.swift; sourceTree = "<group>"; };
+=======
+		AB0010500000000000000001 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		AB0010510000000000000001 /* PushTokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushTokenStore.swift; sourceTree = "<group>"; };
+		AB0010520000000000000001 /* VoiceComposeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceComposeStore.swift; sourceTree = "<group>"; };
+		AB0010530000000000000001 /* PTTButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PTTButton.swift; sourceTree = "<group>"; };
+>>>>>>> 4ee0577 (feat(ios): PTT voice compose + APNs token registration (cycle 25))
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -107,6 +118,7 @@
 			isa = PBXGroup;
 			children = (
 				AB0010010000000000000001 /* RokibrainApp.swift */,
+				AB0010500000000000000001 /* AppDelegate.swift */,
 				AE0030030000000000000001 /* Models */,
 				AE0030040000000000000001 /* Services */,
 				AE0030050000000000000001 /* Views */,
@@ -150,6 +162,8 @@
 				AB0010170000000000000001 /* DraftsStore.swift */,
 				AB0010210000000000000001 /* DevicesStore.swift */,
 				AB0010310000000000000001 /* OnboardingStore.swift */,
+				AB0010510000000000000001 /* PushTokenStore.swift */,
+				AB0010520000000000000001 /* VoiceComposeStore.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -170,8 +184,17 @@
 				AB0010220000000000000001 /* DevicesTab.swift */,
 				AB0010230000000000000001 /* TmuxPaneView.swift */,
 				AE0030070000000000000001 /* Onboarding */,
+				AE0030080000000000000001 /* Voice */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		AE0030080000000000000001 /* Voice */ = {
+			isa = PBXGroup;
+			children = (
+				AB0010530000000000000001 /* PTTButton.swift */,
+			);
+			path = Voice;
 			sourceTree = "<group>";
 		};
 		AE0030070000000000000001 /* Onboarding */ = {
@@ -296,7 +319,14 @@
 				AA0010340000000000000001 /* SignInStep.swift in Sources */,
 				AA0010350000000000000001 /* PairMacStep.swift in Sources */,
 				AA0010360000000000000001 /* EnablePushStep.swift in Sources */,
+<<<<<<< HEAD
 				AA0010400000000000000001 /* AppMode.swift in Sources */,
+=======
+				AA0010500000000000000001 /* AppDelegate.swift in Sources */,
+				AA0010510000000000000001 /* PushTokenStore.swift in Sources */,
+				AA0010520000000000000001 /* VoiceComposeStore.swift in Sources */,
+				AA0010530000000000000001 /* PTTButton.swift in Sources */,
+>>>>>>> 4ee0577 (feat(ios): PTT voice compose + APNs token registration (cycle 25))
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
