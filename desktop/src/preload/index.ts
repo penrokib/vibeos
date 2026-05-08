@@ -7,6 +7,8 @@
 
 import { contextBridge, ipcRenderer } from 'electron';
 import {
+  DIGEST_GENERATE,
+  DIGEST_LATEST,
   IPC,
   type AuthEnrollPayload,
   type OpenExternalPayload,
@@ -15,6 +17,10 @@ import {
   type CcFleetListPayload,
   type CcFleetSubmitInput,
   type CcFleetSubmitResult,
+  type DigestGenerateInput,
+  type DigestGenerateResult,
+  type DigestLatestInput,
+  type DigestLatestResult,
   type CockpitClosePaneRequest,
   type CockpitInputRequest,
   type CockpitListPanesResponse,
@@ -136,6 +142,14 @@ const api: RokibrainBridgeApi = {
     list: () => ipcRenderer.invoke(IPC.CC_FLEET_LIST) as Promise<CcFleetListPayload>,
     submit: (input: CcFleetSubmitInput) =>
       ipcRenderer.invoke(IPC.CC_FLEET_SUBMIT, input) as Promise<CcFleetSubmitResult>,
+  },
+  digest: {
+    generate: (input: DigestGenerateInput) =>
+      ipcRenderer.invoke(DIGEST_GENERATE, input) as Promise<DigestGenerateResult>,
+    getLatest: (input: DigestLatestInput) =>
+      ipcRenderer.invoke(DIGEST_LATEST, input) as Promise<DigestLatestResult>,
+    onLatest: (handler: (payload: DigestLatestResult) => void) =>
+      subscribe<DigestLatestResult>(DIGEST_LATEST, handler),
   },
   app: {
     quit: () => ipcRenderer.send(IPC.APP_QUIT),

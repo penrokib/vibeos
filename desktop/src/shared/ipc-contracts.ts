@@ -377,6 +377,59 @@ export interface CcFleetSubmitResult {
 }
 
 // -----------------------------------------------------------------------------
+// Cycle 12 — Digest IPC contracts
+// DIGEST_GENERATE: renderer → main: trigger CC digest generation.
+// DIGEST_LATEST:   renderer → main: request cached digest.
+// Main pushes new digests to renderer via `rb.digest.latest` push channel.
+// -----------------------------------------------------------------------------
+
+export type DigestItemKind = 'draft' | 'decision' | 'persona' | 'alert';
+
+export interface DigestItemPayload {
+  id: string;
+  kind: DigestItemKind;
+  title: string;
+  subtitle?: string;
+  deepLink?: string;
+  ts: number;
+}
+
+export interface DigestPayload {
+  id: string;
+  generatedAt: number;
+  mode: 'work' | 'personal';
+  needsYou: DigestItemPayload[];
+  whatHappened: DigestItemPayload[];
+  stuck: DigestItemPayload[];
+}
+
+/** renderer → main: kick off digest generation. */
+export interface DigestGenerateInput {
+  mode: 'work' | 'personal';
+}
+
+/** main → renderer: generation result (or fallback template). */
+export interface DigestGenerateResult {
+  digest: DigestPayload;
+  /** True if CC subprocess was used; false if template fallback. */
+  fromCC: boolean;
+}
+
+/** renderer → main: request latest cached digest. */
+export interface DigestLatestInput {
+  mode: 'work' | 'personal';
+}
+
+/** main → renderer: latest cached digest, or null if not yet generated. */
+export interface DigestLatestResult {
+  digest: DigestPayload | null;
+}
+
+// IPC channel name constants for the Digest domain.
+export const DIGEST_GENERATE = 'rb.digest.generate' as const;
+export const DIGEST_LATEST = 'rb.digest.latest' as const;
+
+// -----------------------------------------------------------------------------
 // Channel name constants. ALL ipc traffic uses these.
 // Naming convention: `rb.<domain>.<verb>` — matches design §1 contract.
 // -----------------------------------------------------------------------------
@@ -605,6 +658,28 @@ export interface RokibrainBridgeApi {
     list: () => Promise<CcFleetListPayload>;
     /** Submit a job to the CC fleet; resolves when the subprocess completes. */
     submit: (input: CcFleetSubmitInput) => Promise<CcFleetSubmitResult>;
+  };
+  digest: {
+    /**
+     * M12/Cycle-12: Trigger digest generation for the given mode.
+     * Renderer → Main; main dispatches to DigestGenerator via FleetManager.
+     * Result is pushed back via onLatest subscription.
+     *
+     * IPC channel: DIGEST_GENERATE
+     */
+    generate: (input: DigestGenerateInput) => Promise<DigestGenerateResult>;
+    /**
+     * Request the latest cached digest for a given mode.
+     * Returns null if none has been generated yet.
+     *
+     * IPC channel: DIGEST_LATEST
+     */
+    getLatest: (input: DigestLatestInput) => Promise<DigestLatestResult>;
+    /**
+     * Subscribe to new digests pushed from main when generation completes.
+     * Returns an unsubscribe function (call on component unmount).
+     */
+    onLatest: (handler: (payload: DigestLatestResult) => void) => () => void;
   };
   app: {
     quit: () => void;
