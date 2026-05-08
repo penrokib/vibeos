@@ -7,6 +7,7 @@ import { AuthModule } from "./auth/auth.module";
 import { BugsModule } from "./bugs/bugs.module";
 import { DecisionsModule } from "./decisions/decisions.module";
 import { DevicesModule } from "./devices/devices.module";
+import { DigestModule } from "./digest/digest.module";
 import { DispatchModule } from "./dispatch/dispatch.module";
 import { EnrollmentModule } from "./enrollment/enrollment.module";
 import { FleetModule } from "./fleet/fleet.module";
@@ -31,6 +32,7 @@ import { VoiceModule } from "./voice/voice.module";
     AuditModule,
     DecisionsModule,
     BugsModule,
+    DigestModule,
     InstallerModule,
     AgencyModule,
     DispatchModule,
