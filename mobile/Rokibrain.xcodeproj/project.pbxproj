@@ -23,6 +23,13 @@
 		AA0010100000000000000001 /* DigestStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010100000000000000001 /* DigestStore.swift */; };
 		AA0010110000000000000001 /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010110000000000000001 /* TodayView.swift */; };
 		AA00100D0000000000000001 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AB00100D0000000000000001 /* Preview Assets.xcassets */; };
+		AA0010120000000000000001 /* OnboardingState.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010120000000000000001 /* OnboardingState.swift */; };
+		AA0010130000000000000001 /* OnboardingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010130000000000000001 /* OnboardingStore.swift */; };
+		AA0010140000000000000001 /* OnboardingFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010140000000000000001 /* OnboardingFlow.swift */; };
+		AA0010150000000000000001 /* WelcomeStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010150000000000000001 /* WelcomeStep.swift */; };
+		AA0010160000000000000001 /* SignInStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010160000000000000001 /* SignInStep.swift */; };
+		AA0010170000000000000001 /* PairMacStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010170000000000000001 /* PairMacStep.swift */; };
+		AA0010180000000000000001 /* EnablePushStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010180000000000000001 /* EnablePushStep.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -44,6 +51,13 @@
 		AB00100F0000000000000001 /* Digest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Digest.swift; sourceTree = "<group>"; };
 		AB0010100000000000000001 /* DigestStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DigestStore.swift; sourceTree = "<group>"; };
 		AB0010110000000000000001 /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
+		AB0010120000000000000001 /* OnboardingState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingState.swift; sourceTree = "<group>"; };
+		AB0010130000000000000001 /* OnboardingStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingStore.swift; sourceTree = "<group>"; };
+		AB0010140000000000000001 /* OnboardingFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlow.swift; sourceTree = "<group>"; };
+		AB0010150000000000000001 /* WelcomeStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeStep.swift; sourceTree = "<group>"; };
+		AB0010160000000000000001 /* SignInStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInStep.swift; sourceTree = "<group>"; };
+		AB0010170000000000000001 /* PairMacStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairMacStep.swift; sourceTree = "<group>"; };
+		AB0010180000000000000001 /* EnablePushStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnablePushStep.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -92,6 +106,7 @@
 			children = (
 				AB0010020000000000000001 /* Models.swift */,
 				AB00100F0000000000000001 /* Digest.swift */,
+				AB0010120000000000000001 /* OnboardingState.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -103,6 +118,7 @@
 				AB0010040000000000000001 /* WSClient.swift */,
 				AB0010050000000000000001 /* Keychain.swift */,
 				AB0010100000000000000001 /* DigestStore.swift */,
+				AB0010130000000000000001 /* OnboardingStore.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -117,8 +133,21 @@
 				AB00100A0000000000000001 /* TerminalsView.swift */,
 				AB00100B0000000000000001 /* SettingsView.swift */,
 				AB0010110000000000000001 /* TodayView.swift */,
+				AE0030070000000000000001 /* Onboarding */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		AE0030070000000000000001 /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				AB0010140000000000000001 /* OnboardingFlow.swift */,
+				AB0010150000000000000001 /* WelcomeStep.swift */,
+				AB0010160000000000000001 /* SignInStep.swift */,
+				AB0010170000000000000001 /* PairMacStep.swift */,
+				AB0010180000000000000001 /* EnablePushStep.swift */,
+			);
+			path = Onboarding;
 			sourceTree = "<group>";
 		};
 		AE0030060000000000000001 /* Preview Content */ = {
@@ -213,6 +242,13 @@
 				AA00100F0000000000000001 /* Digest.swift in Sources */,
 				AA0010100000000000000001 /* DigestStore.swift in Sources */,
 				AA0010110000000000000001 /* TodayView.swift in Sources */,
+				AA0010120000000000000001 /* OnboardingState.swift in Sources */,
+				AA0010130000000000000001 /* OnboardingStore.swift in Sources */,
+				AA0010140000000000000001 /* OnboardingFlow.swift in Sources */,
+				AA0010150000000000000001 /* WelcomeStep.swift in Sources */,
+				AA0010160000000000000001 /* SignInStep.swift in Sources */,
+				AA0010170000000000000001 /* PairMacStep.swift in Sources */,
+				AA0010180000000000000001 /* EnablePushStep.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

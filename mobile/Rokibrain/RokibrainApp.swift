@@ -15,10 +15,13 @@ struct RokibrainApp: App {
 
 struct RootView: View {
     @EnvironmentObject var auth: AuthStore
+    @AppStorage("vibeos_onboarding_complete") private var onboardingComplete: Bool = false
 
     var body: some View {
         Group {
-            if auth.jwt != nil {
+            if !onboardingComplete {
+                OnboardingFlow()
+            } else if auth.jwt != nil {
                 MainTabView()
             } else {
                 LoginView()
