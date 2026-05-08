@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: vibeos-bff
+  namespace: vibeos-prod
+  labels:
+    app: vibeos-bff
+    app.kubernetes.io/name: vibeos-bff
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: vibeos
+spec:
+  type: ClusterIP
+  selector:
+    app: vibeos-bff
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 4000
