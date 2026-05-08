@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.rokibrain.app</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Applications/rokibrain.app/Contents/MacOS/rokibrain</string>
+    <string>--hidden</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <dict>
+    <key>SuccessfulExit</key>
+    <false/>
+    <key>Crashed</key>
+    <true/>
+  </dict>
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+  <key>ProcessType</key>
+  <string>Interactive</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>HOME</key>
+    <string>/Users/__USER__</string>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>TMUX_TMPDIR</key>
+    <string>/tmp</string>
+    <key>ROKIBRAIN_BFF_URL</key>
+    <string>https://app.rokibrain.com</string>
+    <key>NODE_ENV</key>
+    <string>production</string>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>/Users/__USER__/Library/Logs/rokibrain-app/launchd-stdout.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/__USER__/Library/Logs/rokibrain-app/launchd-stderr.log</string>
+</dict>
+</plist>

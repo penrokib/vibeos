@@ -1,14 +1,50 @@
 {
   "name": "@vibeos/desktop",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
-  "description": "vibeOS Electron desktop app — main, renderer, daemon, children. Will be populated by cycle 3 migration.",
-  "license": "MIT",
+  "description": "rokibrain.app — single Electron desktop bundle (M01 shell + IPC contracts).",
+  "license": "UNLICENSED",
+  "main": "out/main/index.js",
   "scripts": {
-    "build": "echo 'TODO: cycle 3 migrates desktop build pipeline' && exit 0",
-    "type-check": "echo 'TODO: cycle 3 migrates type-check' && exit 0",
-    "test": "echo 'TODO: cycle 3 migrates tests' && exit 0",
-    "lint": "echo 'TODO: cycle 3 migrates lint' && exit 0",
-    "clean": "rm -rf out dist release node_modules/.cache"
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "type-check": "tsc --noEmit -p tsconfig.json",
+    "lint": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "start": "electron-vite preview",
+    "dist:mac": "yarn build && electron-builder --mac --config electron-builder.yml",
+    "dist:linux": "yarn build && electron-builder --linux --config electron-builder.yml",
+    "dist:win": "yarn build && electron-builder --win --config electron-builder.yml",
+    "clean": "rm -rf out dist node_modules tsconfig.tsbuildinfo"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9"
+  },
+  "devDependencies": {
+    "@electron/notarize": "^2.5.0",
+    "@tailwindcss/postcss": "^4",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^5.0.0",
+    "@vitest/ui": "^4.1.5",
+    "electron": "^32.2.7",
+    "electron-builder": "^25.1.8",
+    "electron-vite": "^2.3.0",
+    "happy-dom": "^20.9.0",
+    "jsdom": "^29.1.1",
+    "msw": "^2.14.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwindcss": "^4",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.0",
+    "vitest": "^4.1.5"
   }
 }

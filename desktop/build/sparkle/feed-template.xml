@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  rokibrain.app  Sparkle / electron-updater feed template (M13)
+
+  Owner: .github/workflows/desktop-release.yml fills placeholders on each
+  tagged release and uploads the result to:
+    https://app.rokibrain.com/releases/desktop/
+
+  Placeholder convention: ${VARIABLE_NAME}. The release workflow runs
+  envsubst (or sed) over this template per platform.
+
+  Variables expected from the workflow:
+    VERSION              semver of the release (e.g. 1.2.3).
+    PUB_DATE             RFC 822 datetime (e.g. Wed, 07 May 2026 14:00:00 +0000).
+    DMG_URL              full URL to the macOS arm64 DMG.
+    DMG_LENGTH           file length in bytes.
+    SPARKLE_ED_SIGNATURE base64 ed25519 signature from sign_update.
+    MIN_OS_VERSION       minimum macOS, e.g. 12.0
+    RELEASE_NOTES_URL    markdown -&gt; HTML notes published next to the DMG.
+
+  Sparkle EdDSA signing key:
+    Private  stored in 1Password (Roki blocker #7).
+    Public   baked into the macOS app at build time (M11/M13 follow-up).
+-->
+<rss version="2.0"
+     xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle"
+     xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>rokibrain.app updates</title>
+    <link>https://app.rokibrain.com/releases/desktop/</link>
+    <description>Auto-update feed for rokibrain.app desktop bundle.</description>
+    <language>en</language>
+    <item>
+      <title>rokibrain ${VERSION}</title>
+      <pubDate>${PUB_DATE}</pubDate>
+      <sparkle:version>${VERSION}</sparkle:version>
+      <sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>${MIN_OS_VERSION}</sparkle:minimumSystemVersion>
+      <sparkle:releaseNotesLink>${RELEASE_NOTES_URL}</sparkle:releaseNotesLink>
+      <enclosure
+        url="${DMG_URL}"
+        sparkle:version="${VERSION}"
+        sparkle:shortVersionString="${VERSION}"
+        sparkle:edSignature="${SPARKLE_ED_SIGNATURE}"
+        length="${DMG_LENGTH}"
+        type="application/octet-stream" />
+    </item>
+  </channel>
+</rss>

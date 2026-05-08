@@ -14,6 +14,7 @@
     "desktop",
     "bff",
     "sdk",
+    "packages/*",
     "plugins/*"
   ],
   "scripts": {

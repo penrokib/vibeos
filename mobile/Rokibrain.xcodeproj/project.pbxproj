@@ -1,0 +1,341 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		AA0010010000000000000001 /* RokibrainApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010010000000000000001 /* RokibrainApp.swift */; };
+		AA0010020000000000000001 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010020000000000000001 /* Models.swift */; };
+		AA0010030000000000000001 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010030000000000000001 /* APIClient.swift */; };
+		AA0010040000000000000001 /* WSClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010040000000000000001 /* WSClient.swift */; };
+		AA0010050000000000000001 /* Keychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010050000000000000001 /* Keychain.swift */; };
+		AA0010060000000000000001 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010060000000000000001 /* LoginView.swift */; };
+		AA0010070000000000000001 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010070000000000000001 /* HomeView.swift */; };
+		AA0010080000000000000001 /* DecisionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010080000000000000001 /* DecisionsView.swift */; };
+		AA0010090000000000000001 /* DraftsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010090000000000000001 /* DraftsView.swift */; };
+		AA00100A0000000000000001 /* TerminalsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB00100A0000000000000001 /* TerminalsView.swift */; };
+		AA00100B0000000000000001 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB00100B0000000000000001 /* SettingsView.swift */; };
+		AA00100C0000000000000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AB00100C0000000000000001 /* Assets.xcassets */; };
+		AA00100D0000000000000001 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AB00100D0000000000000001 /* Preview Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		AC0010000000000000000001 /* Rokibrain.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Rokibrain.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AB0010010000000000000001 /* RokibrainApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RokibrainApp.swift; sourceTree = "<group>"; };
+		AB0010020000000000000001 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		AB0010030000000000000001 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
+		AB0010040000000000000001 /* WSClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WSClient.swift; sourceTree = "<group>"; };
+		AB0010050000000000000001 /* Keychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Keychain.swift; sourceTree = "<group>"; };
+		AB0010060000000000000001 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		AB0010070000000000000001 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		AB0010080000000000000001 /* DecisionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DecisionsView.swift; sourceTree = "<group>"; };
+		AB0010090000000000000001 /* DraftsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftsView.swift; sourceTree = "<group>"; };
+		AB00100A0000000000000001 /* TerminalsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalsView.swift; sourceTree = "<group>"; };
+		AB00100B0000000000000001 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		AB00100C0000000000000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		AB00100D0000000000000001 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		AB00100E0000000000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		AD0020000000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		AE0030000000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				AE0030010000000000000001 /* Rokibrain */,
+				AE0030020000000000000001 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		AE0030010000000000000001 /* Rokibrain */ = {
+			isa = PBXGroup;
+			children = (
+				AB0010010000000000000001 /* RokibrainApp.swift */,
+				AE0030030000000000000001 /* Models */,
+				AE0030040000000000000001 /* Services */,
+				AE0030050000000000000001 /* Views */,
+				AB00100C0000000000000001 /* Assets.xcassets */,
+				AE0030060000000000000001 /* Preview Content */,
+				AB00100E0000000000000001 /* Info.plist */,
+			);
+			path = Rokibrain;
+			sourceTree = "<group>";
+		};
+		AE0030020000000000000001 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				AC0010000000000000000001 /* Rokibrain.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		AE0030030000000000000001 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				AB0010020000000000000001 /* Models.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		AE0030040000000000000001 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				AB0010030000000000000001 /* APIClient.swift */,
+				AB0010040000000000000001 /* WSClient.swift */,
+				AB0010050000000000000001 /* Keychain.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		AE0030050000000000000001 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				AB0010060000000000000001 /* LoginView.swift */,
+				AB0010070000000000000001 /* HomeView.swift */,
+				AB0010080000000000000001 /* DecisionsView.swift */,
+				AB0010090000000000000001 /* DraftsView.swift */,
+				AB00100A0000000000000001 /* TerminalsView.swift */,
+				AB00100B0000000000000001 /* SettingsView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		AE0030060000000000000001 /* Preview Content */ = {
+			isa = PBXGroup;
+			children = (
+				AB00100D0000000000000001 /* Preview Assets.xcassets */,
+			);
+			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		AF0040000000000000000001 /* Rokibrain */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BC0050000000000000000001 /* Build configuration list for PBXNativeTarget "Rokibrain" */;
+			buildPhases = (
+				BD0060000000000000000001 /* Sources */,
+				AD0020000000000000000001 /* Frameworks */,
+				BE0070000000000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Rokibrain;
+			productName = Rokibrain;
+			productReference = AC0010000000000000000001 /* Rokibrain.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		BF0080000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					AF0040000000000000000001 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = CA0090000000000000000001 /* Build configuration list for PBXProject "Rokibrain" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = AE0030000000000000000001;
+			productRefGroup = AE0030020000000000000001 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AF0040000000000000000001 /* Rokibrain */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		BE0070000000000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA00100D0000000000000001 /* Preview Assets.xcassets in Resources */,
+				AA00100C0000000000000001 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		BD0060000000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA0010010000000000000001 /* RokibrainApp.swift in Sources */,
+				AA0010020000000000000001 /* Models.swift in Sources */,
+				AA0010030000000000000001 /* APIClient.swift in Sources */,
+				AA0010040000000000000001 /* WSClient.swift in Sources */,
+				AA0010050000000000000001 /* Keychain.swift in Sources */,
+				AA0010060000000000000001 /* LoginView.swift in Sources */,
+				AA0010070000000000000001 /* HomeView.swift in Sources */,
+				AA0010080000000000000001 /* DecisionsView.swift in Sources */,
+				AA0010090000000000000001 /* DraftsView.swift in Sources */,
+				AA00100A0000000000000001 /* TerminalsView.swift in Sources */,
+				AA00100B0000000000000001 /* SettingsView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		CB00A0000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		CB00A0010000000000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		CB00A0020000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"Rokibrain/Preview Content\"";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Rokibrain/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.rokibrain.ios;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		CB00A0030000000000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"Rokibrain/Preview Content\"";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Rokibrain/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.rokibrain.ios;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		CA0090000000000000000001 /* Build configuration list for PBXProject "Rokibrain" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CB00A0000000000000000001 /* Debug */,
+				CB00A0010000000000000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		BC0050000000000000000001 /* Build configuration list for PBXNativeTarget "Rokibrain" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CB00A0020000000000000001 /* Debug */,
+				CB00A0030000000000000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = BF0080000000000000000001 /* Project object */;
+}
