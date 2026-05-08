@@ -31,6 +31,7 @@ import {
 import { Supervisor } from './supervisor';
 import { EnvJwtAuth, DaemonWsServer } from './ws-server';
 import type { SupervisorStatus, ChildState } from './types';
+import { WaChild } from './children/wa/wa-child';
 
 // -----------------------------------------------------------------------------
 // IPC envelope between main and daemon utilityProcess.
@@ -124,6 +125,21 @@ export async function bootstrapDaemon(
   opts: DaemonBootstrapOptions = {},
 ): Promise<DaemonBootstrapResult> {
   const supervisor = new Supervisor();
+
+  // ---- M04: WaChild registration (MESH_WA_ENABLED=true gates activation) ---
+  // Default OFF in v1 — set MESH_WA_ENABLED=true to opt in.
+  // MESH_WA_BASE_URL overrides the backend URL (env-only, no committed value).
+  if (process.env['MESH_WA_ENABLED'] === 'true') {
+    supervisor.register(
+      { id: 'wa-personal', platform: 'whatsapp' },
+      async (ctx) =>
+        new WaChild(ctx, {
+          account: 'personal',
+          // baseUrl falls through to env MESH_WA_BASE_URL → http://localhost:8086
+        }),
+    );
+    log('info', 'wa-personal child registered (MESH_WA_ENABLED=true)');
+  }
 
   const ws = new DaemonWsServer({
     auth: new EnvJwtAuth(),

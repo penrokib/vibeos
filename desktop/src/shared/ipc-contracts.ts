@@ -282,6 +282,12 @@ export interface AuthEnrollPayload {
 // READ ONLY in this slice. Sending stays drafts-only via the Drafts tab.
 // -----------------------------------------------------------------------------
 
+/**
+ * Canonical platform kinds for supervised children. Added M04.
+ * Wave-3 will add 'tg' | 'discord' | 'email' | 'linkedin' as those modules ship.
+ */
+export type MeshChildKind = 'wa' | 'tg' | 'discord' | 'email' | 'linkedin';
+
 /** Per-account connection status from the local mesh backend. */
 export type MeshAccountStatus = 'open' | 'connecting' | 'close' | 'unknown';
 
