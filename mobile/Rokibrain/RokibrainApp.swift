@@ -48,6 +48,9 @@ struct MainTabView: View {
             DraftsView()
                 .tabItem { Label("Drafts", systemImage: "square.and.pencil") }
 
+            DevicesTab()
+                .tabItem { Label("Devices", systemImage: "desktopcomputer") }
+
             TerminalsView()
                 .tabItem { Label("Terminals", systemImage: "terminal.fill") }
 
