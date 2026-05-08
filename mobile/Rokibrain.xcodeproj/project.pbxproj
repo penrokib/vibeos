@@ -29,6 +29,10 @@
 		AA0010170000000000000001 /* DraftsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010170000000000000001 /* DraftsStore.swift */; };
 		AA0010180000000000000001 /* DraftsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010180000000000000001 /* DraftsTab.swift */; };
 		AA0010190000000000000001 /* DraftDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010190000000000000001 /* DraftDetailView.swift */; };
+		AA0010200000000000000001 /* MeshDevice.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010200000000000000001 /* MeshDevice.swift */; };
+		AA0010210000000000000001 /* DevicesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010210000000000000001 /* DevicesStore.swift */; };
+		AA0010220000000000000001 /* DevicesTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010220000000000000001 /* DevicesTab.swift */; };
+		AA0010230000000000000001 /* TmuxPaneView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010230000000000000001 /* TmuxPaneView.swift */; };
 		AA00100D0000000000000001 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AB00100D0000000000000001 /* Preview Assets.xcassets */; };
 /* End PBXBuildFile section */
 
@@ -58,6 +62,10 @@
 		AB0010170000000000000001 /* DraftsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftsStore.swift; sourceTree = "<group>"; };
 		AB0010180000000000000001 /* DraftsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftsTab.swift; sourceTree = "<group>"; };
 		AB0010190000000000000001 /* DraftDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftDetailView.swift; sourceTree = "<group>"; };
+		AB0010200000000000000001 /* MeshDevice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshDevice.swift; sourceTree = "<group>"; };
+		AB0010210000000000000001 /* DevicesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevicesStore.swift; sourceTree = "<group>"; };
+		AB0010220000000000000001 /* DevicesTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevicesTab.swift; sourceTree = "<group>"; };
+		AB0010230000000000000001 /* TmuxPaneView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TmuxPaneView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -108,6 +116,7 @@
 				AB00100F0000000000000001 /* Digest.swift */,
 				AB0010120000000000000001 /* InboxThread.swift */,
 				AB0010160000000000000001 /* DraftEnhanced.swift */,
+				AB0010200000000000000001 /* MeshDevice.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -121,6 +130,7 @@
 				AB0010100000000000000001 /* DigestStore.swift */,
 				AB0010130000000000000001 /* InboxStore.swift */,
 				AB0010170000000000000001 /* DraftsStore.swift */,
+				AB0010210000000000000001 /* DevicesStore.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -138,6 +148,8 @@
 				AB0010140000000000000001 /* InboxTab.swift */,
 				AB0010180000000000000001 /* DraftsTab.swift */,
 				AB0010190000000000000001 /* DraftDetailView.swift */,
+				AB0010220000000000000001 /* DevicesTab.swift */,
+				AB0010230000000000000001 /* TmuxPaneView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -241,6 +253,10 @@
 				AA0010170000000000000001 /* DraftsStore.swift in Sources */,
 				AA0010180000000000000001 /* DraftsTab.swift in Sources */,
 				AA0010190000000000000001 /* DraftDetailView.swift in Sources */,
+				AA0010200000000000000001 /* MeshDevice.swift in Sources */,
+				AA0010210000000000000001 /* DevicesStore.swift in Sources */,
+				AA0010220000000000000001 /* DevicesTab.swift in Sources */,
+				AA0010230000000000000001 /* TmuxPaneView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

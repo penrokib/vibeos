@@ -45,6 +45,9 @@ struct MainTabView: View {
             DecisionsView()
                 .tabItem { Label("Decisions", systemImage: "checkmark.seal.fill") }
 
+            DevicesTab()
+                .tabItem { Label("Devices", systemImage: "desktopcomputer") }
+
             TerminalsView()
                 .tabItem { Label("Devices", systemImage: "terminal.fill") }
 
