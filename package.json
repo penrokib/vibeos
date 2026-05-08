@@ -1,0 +1,30 @@
+{
+  "name": "vibeos",
+  "version": "0.0.0",
+  "private": true,
+  "description": "OSS companion app to run your business across every comms channel — Mac engine + iPhone window + Apple Watch glance, with Claude Code as the on-device AI.",
+  "license": "MIT",
+  "author": "Roki Hasan + contributors",
+  "homepage": "https://vibeos.app",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/penrokib/vibeos.git"
+  },
+  "workspaces": [
+    "desktop",
+    "bff",
+    "sdk",
+    "plugins/*"
+  ],
+  "scripts": {
+    "build": "yarn workspaces foreach -A run build",
+    "type-check": "yarn workspaces foreach -A run type-check",
+    "test": "yarn workspaces foreach -A run test",
+    "lint": "yarn workspaces foreach -A run lint",
+    "clean": "yarn workspaces foreach -A run clean"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "yarn@4.5.0"
+}

@@ -1,0 +1,14 @@
+{
+  "name": "@vibeos/bff",
+  "version": "0.0.0",
+  "private": true,
+  "description": "vibeOS multi-tenant BFF (NestJS, Scaleway). Encrypted blob relay — cannot read user data. Will be populated by cycle 3 migration + cycle 4 multi-tenant auth.",
+  "license": "MIT",
+  "scripts": {
+    "build": "echo 'TODO: cycle 3 migrates BFF build' && exit 0",
+    "type-check": "echo 'TODO: cycle 3 migrates type-check' && exit 0",
+    "test": "echo 'TODO: cycle 3 migrates tests' && exit 0",
+    "lint": "echo 'TODO: cycle 3 migrates lint' && exit 0",
+    "clean": "rm -rf dist node_modules/.cache"
+  }
+}

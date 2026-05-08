@@ -1,0 +1,22 @@
+{
+  "name": "@vibeos/sdk",
+  "version": "0.0.0",
+  "description": "vibeOS Plugin SDK — BaseMeshChild contract + envelope types for community plugin authors.",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "echo 'TODO: SDK published in v1.1; placeholder for now' && exit 0",
+    "type-check": "echo 'TODO: SDK type-check in v1.1' && exit 0",
+    "test": "echo 'TODO: SDK tests in v1.1' && exit 0",
+    "lint": "echo 'TODO: SDK lint in v1.1' && exit 0",
+    "clean": "rm -rf dist"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

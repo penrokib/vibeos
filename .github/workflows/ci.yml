@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  yarn-install:
+    name: yarn install (smoke)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: enable corepack
+        run: corepack enable
+      - name: yarn install
+        run: yarn install --immutable
+
+  type-check:
+    name: yarn type-check
+    runs-on: ubuntu-22.04
+    needs: yarn-install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: corepack enable && yarn install --immutable
+      - run: yarn type-check
