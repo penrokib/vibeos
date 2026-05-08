@@ -19,6 +19,9 @@
 		AA00100A0000000000000001 /* TerminalsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB00100A0000000000000001 /* TerminalsView.swift */; };
 		AA00100B0000000000000001 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB00100B0000000000000001 /* SettingsView.swift */; };
 		AA00100C0000000000000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AB00100C0000000000000001 /* Assets.xcassets */; };
+		AA00100F0000000000000001 /* Digest.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB00100F0000000000000001 /* Digest.swift */; };
+		AA0010100000000000000001 /* DigestStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010100000000000000001 /* DigestStore.swift */; };
+		AA0010110000000000000001 /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB0010110000000000000001 /* TodayView.swift */; };
 		AA00100D0000000000000001 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AB00100D0000000000000001 /* Preview Assets.xcassets */; };
 /* End PBXBuildFile section */
 
@@ -38,6 +41,9 @@
 		AB00100C0000000000000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AB00100D0000000000000001 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		AB00100E0000000000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AB00100F0000000000000001 /* Digest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Digest.swift; sourceTree = "<group>"; };
+		AB0010100000000000000001 /* DigestStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DigestStore.swift; sourceTree = "<group>"; };
+		AB0010110000000000000001 /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -85,6 +91,7 @@
 			isa = PBXGroup;
 			children = (
 				AB0010020000000000000001 /* Models.swift */,
+				AB00100F0000000000000001 /* Digest.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -95,6 +102,7 @@
 				AB0010030000000000000001 /* APIClient.swift */,
 				AB0010040000000000000001 /* WSClient.swift */,
 				AB0010050000000000000001 /* Keychain.swift */,
+				AB0010100000000000000001 /* DigestStore.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -108,6 +116,7 @@
 				AB0010090000000000000001 /* DraftsView.swift */,
 				AB00100A0000000000000001 /* TerminalsView.swift */,
 				AB00100B0000000000000001 /* SettingsView.swift */,
+				AB0010110000000000000001 /* TodayView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -201,6 +210,9 @@
 				AA0010090000000000000001 /* DraftsView.swift in Sources */,
 				AA00100A0000000000000001 /* TerminalsView.swift in Sources */,
 				AA00100B0000000000000001 /* SettingsView.swift in Sources */,
+				AA00100F0000000000000001 /* Digest.swift in Sources */,
+				AA0010100000000000000001 /* DigestStore.swift in Sources */,
+				AA0010110000000000000001 /* TodayView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
