@@ -489,6 +489,9 @@ function registerIpcHandlers(): void {
     IPC.MESH_MESSAGES,
     (_evt, req: MeshMessagesRequest): Promise<MeshMessagesPayload> => fetchMeshMessages(req),
   );
+
+  // Note: DAEMON_SUPERVISOR_STATUS, DAEMON_CHILD_RESTART, DAEMON_EMERGENCY_STOP
+  // are registered above by the M02 daemon block. No duplicates here.
 }
 
 // ---- mesh backend client ---------------------------------------------------
