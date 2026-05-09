@@ -16,8 +16,8 @@
 # in build script — read from electron-builder.yml").
 # =============================================================================
 
-appId: com.rokibrain.app
-productName: rokibrain
+appId: app.vibeos.desktop
+productName: vibeOS
 copyright: Copyright © 2026 Rokibul Hasan
 
 # In a Yarn 4 workspace, electron-builder cannot always resolve `electron`
@@ -85,7 +85,7 @@ linux:
   artifactName: ${productName}-${version}-${arch}.${ext}
   desktop:
     entry:
-      Name: rokibrain
+      Name: vibeOS
       Comment: Personal mesh + agent control plane
       Categories: Network;Office;Utility
 
@@ -117,7 +117,7 @@ nsis:
 # -----------------------------------------------------------------------------
 publish:
   provider: generic
-  url: https://app.rokibrain.com/releases/desktop/
+  url: https://vibeos.app/releases/desktop/
   channel: latest
 
 # -----------------------------------------------------------------------------
